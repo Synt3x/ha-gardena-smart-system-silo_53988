@@ -26,10 +26,13 @@ from .decode import (
     NEXT_START_SOURCE,
     decode_lawn_coverage,
     decode_paused_until,
+    decode_position,
     decode_schedule,
     get_value,
+    has_lona,
     hexdump,
     is_gen1_mower,
+    last_contact_ts,
     local_naive_from_epoch,
 )
 from .entity import GardenaEntity
@@ -95,6 +98,12 @@ def _coverage_attrs(data: Data) -> dict[str, Any]:
     }
 
 
+def _position_value(data: Data, field: str) -> float | None:
+    """LONA position. Only LONA mowers report it, about every 3 s while mowing."""
+    position = decode_position(_lb(data, "position"))
+    return getattr(position, field) if position else None
+
+
 RAW_FIELDS = (
     "settings_report",
     "settings_control",
@@ -117,6 +126,9 @@ class GardenaSensorDescription(SensorEntityDescription):
     value_fn: Callable[[Data], Any]
     attrs_fn: Callable[[Data], dict[str, Any] | None] = lambda data: None
     requires_online: bool = False
+    lona_only: bool = False
+    # Keep showing the last value when the mower stops reporting (position).
+    keep_last: bool = False
 
 
 SENSORS: tuple[GardenaSensorDescription, ...] = (
@@ -168,6 +180,7 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
     GardenaSensorDescription(
         key="paused_until",
         translation_key="paused_until",
+        entity_registry_enabled_default=False,
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=_paused_until,
         attrs_fn=_paused_attrs,
@@ -215,6 +228,33 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         value_fn=lambda d: _lb(d, "collisions"),
     ),
     GardenaSensorDescription(
+        key="latitude",
+        translation_key="latitude",
+        native_unit_of_measurement="°",
+        suggested_display_precision=6,
+        lona_only=True,
+        keep_last=True,
+        value_fn=lambda d: _position_value(d, "latitude"),
+    ),
+    GardenaSensorDescription(
+        key="longitude",
+        translation_key="longitude",
+        native_unit_of_measurement="°",
+        suggested_display_precision=6,
+        lona_only=True,
+        keep_last=True,
+        value_fn=lambda d: _position_value(d, "longitude"),
+    ),
+    GardenaSensorDescription(
+        key="last_contact",
+        translation_key="last_contact",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: (
+            dt_util.utc_from_timestamp(ts) if (ts := last_contact_ts(d)) else None
+        ),
+    ),
+    GardenaSensorDescription(
         key="rf_link_quality",
         translation_key="rf_link_quality",
         native_unit_of_measurement=PERCENTAGE,
@@ -251,6 +291,7 @@ async def async_setup_entry(
         for device_id, device in coordinator.data.items()
         if is_gen1_mower(device["data"])
         for description in SENSORS
+        if has_lona(device["data"]) or not description.lona_only
     )
 
 
@@ -263,10 +304,16 @@ class GardenaSensor(GardenaEntity, SensorEntity):
         super().__init__(coordinator, device_id, description.key)
         self.entity_description = description
         self._requires_mower_online = description.requires_online
+        self._last_value: Any = None
 
     @property
     def native_value(self) -> Any:
-        return self.entity_description.value_fn(self.device_data)
+        value = self.entity_description.value_fn(self.device_data)
+        if self.entity_description.keep_last:
+            if value is None:
+                return self._last_value
+            self._last_value = value
+        return value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

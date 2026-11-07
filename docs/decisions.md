@@ -2,6 +2,24 @@
 
 Newest first.
 
+## 2026-11-07 – 0.3.0: app zones entered by hand, Automatic, GPS sensors, fixes
+- **Area:** GUI / data
+- **Decision:**
+  - The start zone list is Automatic plus up to 4 zones (name + distance) entered under Configure. A zone without a distance falls back to the mower's start area 1–3.
+  - "Charging station" became "Automatic" (distance 0 = the mower's default starting point).
+  - Latitude and longitude are separate sensors (LONA only) and keep their last value while parked.
+  - New *Last contact* diagnostic sensor.
+  - The position tracker is enabled by default. *Paused until* is hidden by default.
+- **Why:**
+  - The app's LONA zones aren't in the local API; the mower stores only 3 start areas. The owner said the app allows max 4 zones with unique start points, so knowing the start distances is enough.
+  - "Not updated in 40 min" turned out to be an unchanged value. The gateway measures radio link quality itself, about hourly. *Last contact* makes freshness visible.
+- **Bugs fixed:**
+  - *Paused until* showed 1970-01-01. The mower writes 1970-01-01 to mean "no pause", seen in the log after resuming in the app.
+  - The position tracker was disabled by Home Assistant's default for integration trackers.
+- **Deferred to plan.md (owner's choice):** learning zones automatically, a map track card, SSH exploration of the gateway.
+- **Note:** GPS sensors and the tracker write about every 3 s while mowing. Accepted for now. A coverage map would need care with database growth.
+- **Level:** TEST
+
 ## 2026-11-07 – Start zones: selector + Start, names set in Home Assistant
 - **Area:** GUI / mower control
 - **Decision:** A *Start zone* selector (charging station, zone 1–3) decides where the mower's Start begins. Zone names are options in the integration. The service `start_mowing_for` takes `zone` or `distance`.

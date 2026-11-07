@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import struct
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -116,6 +117,7 @@ _HEADING_SCALE = 0.1
 # Far-future pause the official library writes for "park until further notice".
 PARK_INDEFINITELY = (2042).to_bytes(2, "little") + bytes([12, 31, 22, 0])
 INDEFINITE_YEAR = 2040
+NO_PAUSE_BEFORE_YEAR = 2000
 
 
 def field_value(field: Any) -> Any:
@@ -166,10 +168,18 @@ class PausedUntil:
 
 
 def decode_paused_until(raw: bytes | None) -> PausedUntil | None:
-    """year (2 bytes LE), month, day, hour, minute. All zero = no pause."""
+    """year (2 bytes LE), month, day, hour, minute.
+
+    Observed on the real mower:
+    - b2 07 01 01 00 00 (1970-01-01) after resuming in the app = no pause.
+    - f8 07 0c 1f 16 00 (2040-12-31 22:00) = the app's "until further notice".
+    - fa 07 ... (2042) = the official library's "until further notice".
+    """
     if not raw or len(raw) < 6 or not any(raw):
         return None
     year = int.from_bytes(raw[0:2], "little")
+    if year < NO_PAUSE_BEFORE_YEAR:
+        return None
     if year >= INDEFINITE_YEAR:
         return PausedUntil(None, True)
     try:
@@ -250,18 +260,66 @@ def decode_lawn_coverage(raw: bytes | None) -> list[CoverageArea] | None:
     return areas
 
 
-def zone_distance(data: dict[str, Any], zone: int) -> int | None:
-    """Metres along the guide wire for a start zone. Zone 0 = charging station.
+# Start zones.
+#
+# Starting a zone in the GARDENA app sends the mower only a distance along the
+# guide wire (verified: "Framsida" sent 45 m in mower_timer_with_distance).
+# The app's LONA zones and their names live in the GARDENA cloud; the mower
+# itself stores just three start areas ("Lawn coverage"). So a zone here is a
+# name plus a distance:
+# - zone N with a distance set in the options = the user's own zone, e.g. one
+#   of the app's LONA zones;
+# - otherwise zone 1-3 falls back to the mower's start area N.
+# Zone 0 = automatic: distance 0, which GARDENA's library calls the "default
+# starting point". In a live test the mower drove out by itself for ~80 s.
 
-    Verified: starting "Framsida" in the GARDENA app sent exactly this area's
-    distance (45 m) in mower_timer_with_distance.
-    """
-    if zone == 0:
+ZONE_AUTO = 0
+# The GARDENA app allows at most 4 zones, each with its own start point.
+MAX_ZONES = 4
+
+
+def zone_name_key(zone: int) -> str:
+    return f"zone_{zone}_name"
+
+
+def zone_distance_key(zone: int) -> str:
+    return f"zone_{zone}_distance"
+
+
+@dataclass(frozen=True)
+class StartZone:
+    number: int
+    name: str | None
+    distance_m: int
+    from_mower: bool
+
+
+def start_zones(data: dict[str, Any], options: Mapping[str, Any]) -> list[StartZone]:
+    """The zones the user can start, excluding Automatic, in number order."""
+    areas = {
+        area.area: area.distance_m
+        for area in decode_lawn_coverage(get_value(data, f"{LEMONBEAT}/starting_points")) or []
+    }
+    zones = []
+    for number in range(1, MAX_ZONES + 1):
+        name = options.get(zone_name_key(number)) or None
+        custom = options.get(zone_distance_key(number))
+        if isinstance(custom, (int, float)):
+            zones.append(StartZone(number, name, int(custom), from_mower=False))
+        elif number in areas:
+            zones.append(StartZone(number, name, areas[number], from_mower=True))
+    return zones
+
+
+def start_zone_distance(
+    data: dict[str, Any], options: Mapping[str, Any], zone: int
+) -> int | None:
+    """Metres along the guide wire for a zone number. None = no such zone."""
+    if zone == ZONE_AUTO:
         return 0
-    areas = decode_lawn_coverage(get_value(data, f"{LEMONBEAT}/starting_points")) or []
-    for area in areas:
-        if area.area == zone:
-            return area.distance_m
+    for start_zone in start_zones(data, options):
+        if start_zone.number == zone:
+            return start_zone.distance_m
     return None
 
 
@@ -312,6 +370,29 @@ def opaque_payload(raw: bytes) -> dict[str, str]:
 
 def hexdump(raw: Any) -> str | None:
     return raw.hex(" ") if isinstance(raw, (bytes, bytearray)) else None
+
+
+# Resources that change every few seconds while mowing; they don't count as
+# "contact" so the Last contact sensor doesn't write history every 3 seconds.
+_CHATTY = {"position", "position_timer", "_urn"}
+
+
+def last_contact_ts(data: dict[str, Any]) -> int | None:
+    """Newest report timestamp (Unix seconds) across the mower's resources."""
+    newest = None
+    for obj in data.values():
+        if not isinstance(obj, dict):
+            continue
+        for instance in obj.values():
+            if not isinstance(instance, dict):
+                continue
+            for name, field in instance.items():
+                if name in _CHATTY or not isinstance(field, dict):
+                    continue
+                ts = field.get("ts")
+                if isinstance(ts, int) and (newest is None or ts > newest):
+                    newest = ts
+    return newest
 
 
 def is_gen1_mower(data: dict[str, Any]) -> bool:

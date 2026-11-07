@@ -26,10 +26,8 @@ from .const import (
     DOCK_FURTHER_NOTICE,
     DOCK_NEXT_SCHEDULE,
     DOMAIN,
-    MAX_ZONES,
-    zone_name_key,
 )
-from .decode import is_gen1_mower
+from .decode import MAX_ZONES, is_gen1_mower, zone_distance_key, zone_name_key
 
 PORT_FIELD = vol.All(vol.Coerce(int), vol.Range(min=1, max=65535))
 USER_SCHEMA = vol.Schema(
@@ -151,9 +149,12 @@ class GardenaSilenoOptionsFlow(OptionsFlow):
             # Empty zone name = use the default "Zone N".
             data = {key: value for key, value in user_input.items() if value not in ("", None)}
             return self.async_create_entry(data=data)
-        zone_fields = {
-            vol.Optional(zone_name_key(zone)): str for zone in range(1, MAX_ZONES + 1)
-        }
+        zone_fields: dict[Any, Any] = {}
+        for zone in range(1, MAX_ZONES + 1):
+            zone_fields[vol.Optional(zone_name_key(zone))] = str
+            zone_fields[vol.Optional(zone_distance_key(zone))] = vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=500)
+            )
         schema = vol.Schema(
             {
                 **zone_fields,

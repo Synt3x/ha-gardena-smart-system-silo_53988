@@ -234,7 +234,7 @@ Error messages:
 
 | Option | Choices |
 |---|---|
-| Name of zone 1 / 2 / 3 | Your own names, e.g. `Framsida`. Empty = "Zone 1" … |
+| Zone 1–4 name and start distance | Your app zones, e.g. `Framsida` at `45` m. A zone without a distance uses the mower's own start area with that number (1–3). See [Zones](#zones). |
 | What the Dock button does | **Go home, mow again at the next scheduled time** (default), or **Go home and stay parked until started again** |
 | Mowing time for the Start button | Minutes, default 180 |
 
@@ -257,7 +257,10 @@ them to a dashboard.
 | The integration isn't in the *Add integration* list | Restart Home Assistant after downloading, then reload the browser page (Ctrl+F5). |
 | "Cannot reach the local API" | Check the IP address. Check that port 8443 is open ([Step 2](#check-that-its-on)). The setting can be lost after a gateway factory reset. |
 | "Wrong password" | Read the gateway label again. Only `0-9` and `a-f` are valid, so `f` vs `1` is the usual mistake. |
-| Entities show *Unavailable* | The gateway can't reach the mower, e.g. it's switched off or in winter storage. The *Mower online* diagnostic sensor shows this. |
+| Entities show *Unavailable* | The gateway can't reach the mower, e.g. it's switched off or in winter storage. The *Mower online* diagnostic sensor shows this. A short *Unavailable* (under a second) while Home Assistant starts or reloads the integration is normal. So is about 30 seconds after you enable a hidden entity, because Home Assistant reloads the integration then. |
+| A value "hasn't updated" for a long time | Home Assistant shows when a value last **changed**. If radio link quality stays at 70 %, its time doesn't move. Check **Last contact** (diagnostic section) to see when the mower last reported anything. Radio link quality is measured by the gateway itself, about once an hour. |
+| *Next start* shows *Unknown* | No automatic start is planned: the mower is mowing right now, or parked until further notice. |
+| *Position* is missing | On version 0.2.0 and earlier, Home Assistant created it disabled. Open the device → *Entities* → *Position* → enable it. |
 | Values look stale | Press the *Refresh state* button on the device (diagnostic section). |
 | Anything else | Turn on debug logging (below), reproduce the problem, and open an [issue](https://github.com/Synt3x/ha-gardena-smart-system-silo_53988/issues) with the log and the integration's diagnostics (⋮ → *Download diagnostics*). |
 
@@ -281,32 +284,34 @@ Shown by default:
 | Entity | Notes |
 |---|---|
 | Lawn mower | Start = mow for the configured time from the selected start zone. Dock = your chosen park mode. |
-| Start zone | Charging station or zone 1–3, shown as e.g. `Framsida (45 m)`. Remembered across restarts. |
+| Start zone | **Automatic** (default) or one of your zones, shown as e.g. `Framsida (45 m)`. Remembered across restarts. |
 | Battery | %. Unavailable while the gateway can't reach the mower. |
 | Status | e.g. *Parked by user*, *Leaving charging station*, *Mowing (manual)*, *Searching for charging station*. Raw code in attribute `code`. |
 | Problem | On only while there's an active error. |
 | Schedule paused | On while the mower is parked until further notice or until a date. |
-| Next start | Empty when no automatic start is planned. Attribute `source`. |
-| Paused until | Empty with attribute `indefinitely: true` when paused until further notice. |
+| Next start | *Unknown* when no automatic start is planned. Attribute `source`. |
 | Schedule | e.g. `Mon Tue Wed Thu Fri Sat 07:46, 8 h 9 min`. Entries in attributes. |
 | Lawn coverage areas | Number of enabled areas. Distance, share and guide per area in attributes. |
 | Cutting time | Lifetime hours of the blade motor. |
 | Collisions | Lifetime counter. Wraps at 65 535. |
 | Park until next schedule / Park until further notice | Buttons |
-| Position | LONA only. Updates about every 3 seconds while the mower is out. |
+| Position | LONA only. A marker on the map, updated about every 3 seconds while the mower is out. |
+| Latitude / Longitude | LONA only. The same position as numbers (6 decimals). Keeps the last known value while parked. |
 
 Diagnostic (under the device's *Diagnostic* section):
-Last recorded error and its time (error name is **probable**, see below),
-radio link quality, mower online, refresh state.
+**Last contact** (when the mower last reported anything), last recorded error
+and its time (error name is **probable**, see below), radio link quality,
+mower online, refresh state.
 
 Disabled by default (enable them on the device page if you want them):
-running time, charging cycles, guide wire length, raw settings (hex for
+paused until (date of a timed pause; *Schedule paused* covers the common
+case), running time, charging cycles, guide wire length, raw settings (hex for
 decoding), report position for 1 hour (LONA, while parked).
 
 **Services** (for automations):
 - `gardena_sileno_local.start_mowing_for`: `duration` in minutes, and either
-  `zone` (0 = charging station, 1–3) or `distance` in metres along the guide
-  wire (LONA).
+  `zone` (0 = automatic, 1–4) or `distance` in metres along the guide wire
+  (LONA).
 
 ```yaml
 action: gardena_sileno_local.start_mowing_for
@@ -336,12 +341,22 @@ zone's distance**. Starting "Framsida" (zone 4 in the app) sent
 `mower_timer_with_distance = 00 2d 00 00 0e 10`, which is 45 m and 3600 s. That
 matched the mower's zone 2 (45 m). So:
 
-- The zones you can start are the ones the mower reports. The integration
-  reads them, and the *Lawn coverage areas* sensor lists them with distances.
-- The app's own zone numbers and names (like "4" and "Framsida") live in the
-  GARDENA cloud, not on the mower. Name the zones yourself under **Configure**.
-- If you change a zone's distance in the app, the integration picks up the new
-  distance automatically.
+- The app's zones (max 4, LONA zones drawn on the map) and their names live in
+  the GARDENA cloud. They are **not** in the local API. The mower itself only
+  stores 3 start areas, which the *Lawn coverage areas* sensor lists.
+- So you enter your app zones once under **Configure**: name + start distance.
+  A zone without a distance falls back to the mower's start area with the same
+  number (1–3), with the distance read live from the mower.
+
+**Finding each zone's distance:** run [`tools/capture.py`](tools/capture.py),
+start the zone in the app, and read the first two bytes of
+`mower_timer_with_distance` (`00 2d` = 45 m). The steps are in
+[plan.md](plan.md#1-fill-in-the-four-app-zones-owner-10-minutes). Learning
+zones automatically is planned.
+- **Automatic** sends distance 0, which GARDENA's library calls the *default
+  starting point*: the mower picks where to start by itself. In a test it
+  drove out on its own for about 80 seconds before it began mowing. Exactly
+  how it chooses (for example by the zones' shares) isn't confirmed.
 
 ## What is verified and what isn't
 
@@ -515,6 +530,14 @@ Invoke-RestMethod 'https://<gateway-ip>/websocket_api' -Method Put -Headers @{'X
 **Security note:** while it's on, anyone on your network who knows the first
 8 characters of the gateway ID can read and control your GARDENA devices.
 Don't expose port 8443 to the internet.
+
+---
+
+## What's next
+
+See [plan.md](plan.md): learning zones automatically, a map of the mower's
+track, exploring the gateway over SSH for the LONA map, decoding the settings
+buffer, and the remaining hardware checks.
 
 ---
 

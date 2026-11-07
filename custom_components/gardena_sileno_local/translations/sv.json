@@ -41,11 +41,16 @@
   "options": {
     "step": {
       "init": {
-        "description": "Zonnamn: GARDENA-appens zonnamn finns inte i klipparen, så namnge zon 1-3 här. Lämna tomt för 'Zon N'.",
+        "description": "Zoner: GARDENA-appens zoner (max 4) finns inte i klipparen. Ange varje zons namn och dess startavstånd längs guidekabeln. En zon utan avstånd använder klipparens eget startområde med samma nummer (1-3). Automatiskt finns alltid.",
         "data": {
-          "zone_1_name": "Namn på zon 1",
-          "zone_2_name": "Namn på zon 2",
-          "zone_3_name": "Namn på zon 3",
+          "zone_1_name": "Zon 1 namn",
+          "zone_1_distance": "Zon 1 startavstånd (m)",
+          "zone_2_name": "Zon 2 namn",
+          "zone_2_distance": "Zon 2 startavstånd (m)",
+          "zone_3_name": "Zon 3 namn",
+          "zone_3_distance": "Zon 3 startavstånd (m)",
+          "zone_4_name": "Zon 4 namn",
+          "zone_4_distance": "Zon 4 startavstånd (m)",
           "dock_mode": "Vad Docka-knappen gör",
           "start_minutes": "Klipptid för Start-knappen (minuter)"
         }
@@ -71,7 +76,7 @@
         },
         "zone": {
           "name": "Startzon",
-          "description": "0 = laddstationen, 1-3 = klipparens startzoner. Använd detta eller avstånd."
+          "description": "0 = automatiskt (klipparen väljer startpunkt), 1-4 = dina zoner. Använd detta eller avstånd."
         },
         "distance": {
           "name": "Startavstånd",
@@ -202,6 +207,15 @@
       },
       "rf_link_quality": {
         "name": "Radiolänk"
+      },
+      "last_contact": {
+        "name": "Senaste kontakt"
+      },
+      "latitude": {
+        "name": "Latitud"
+      },
+      "longitude": {
+        "name": "Longitud"
       },
       "guide_wire_length": {
         "name": "Guidekabelns längd"

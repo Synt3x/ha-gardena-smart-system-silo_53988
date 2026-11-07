@@ -21,10 +21,8 @@ from .const import (
     DEFAULT_DOCK_MODE,
     DEFAULT_START_MINUTES,
     DOCK_FURTHER_NOTICE,
-    MAX_ZONES,
-    ZONE_STATION,
 )
-from .decode import GEN1_STATUS, is_gen1_mower, zone_distance
+from .decode import GEN1_STATUS, MAX_ZONES, ZONE_AUTO, is_gen1_mower, start_zone_distance
 from .entity import GardenaEntity
 
 ACTIVITY = {
@@ -86,7 +84,7 @@ class GardenaMower(GardenaEntity, LawnMowerEntity):
         minutes = self.coordinator.config_entry.options.get(
             CONF_START_MINUTES, DEFAULT_START_MINUTES
         )
-        zone = self.coordinator.start_zone.get(self.device_id, ZONE_STATION)
+        zone = self.coordinator.start_zone.get(self.device_id, ZONE_AUTO)
         await self.mower_start(minutes * 60, self._zone_to_distance(zone))
 
     async def async_start_mowing_for(
@@ -97,7 +95,9 @@ class GardenaMower(GardenaEntity, LawnMowerEntity):
         await self.mower_start(duration * 60, distance or 0)
 
     def _zone_to_distance(self, zone: int) -> int:
-        distance = zone_distance(self.device_data, zone)
+        distance = start_zone_distance(
+            self.device_data, self.coordinator.config_entry.options, zone
+        )
         if distance is None:
             raise ServiceValidationError(f"The mower has no start zone {zone}")
         return distance

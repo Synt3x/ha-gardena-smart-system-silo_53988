@@ -40,6 +40,11 @@ class GardenaPosition(GardenaEntity, TrackerEntity):
         return self._last
 
     @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Home Assistant disables integration trackers by default; this one is the point."""
+        return True
+
+    @property
     def source_type(self) -> SourceType:
         return SourceType.GPS
 

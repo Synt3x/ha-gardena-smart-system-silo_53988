@@ -10,13 +10,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import GardenaConfigEntry
-from .const import MAX_ZONES, ZONE_STATION, zone_name_key
-from .decode import LEMONBEAT, decode_lawn_coverage, get_value, is_gen1_mower, zone_distance
+from .decode import ZONE_AUTO, StartZone, is_gen1_mower, start_zones
 from .entity import GardenaEntity
 
 LABELS = {
-    "sv": ("Laddstationen", "Zon {n}"),
-    "en": ("Charging station", "Zone {n}"),
+    "sv": ("Automatiskt", "Zon {n}"),
+    "en": ("Automatic", "Zone {n}"),
 }
 
 
@@ -45,39 +44,46 @@ class StartZoneSelect(GardenaEntity, SelectEntity, RestoreEntity):
             self.coordinator.start_zone[self.device_id] = zone
 
     @property
-    def _zones(self) -> list[int]:
-        areas = decode_lawn_coverage(get_value(self.device_data, f"{LEMONBEAT}/starting_points"))
-        return [ZONE_STATION] + [a.area for a in (areas or [])][:MAX_ZONES]
+    def _zones(self) -> dict[int, StartZone | None]:
+        """Zone number -> zone. Automatic (0) has no StartZone."""
+        zones: dict[int, StartZone | None] = {ZONE_AUTO: None}
+        for zone in start_zones(self.device_data, self.coordinator.config_entry.options):
+            zones[zone.number] = zone
+        return zones
 
-    def _label(self, zone: int) -> str:
-        station, generic = LABELS.get(self.hass.config.language[:2], LABELS["en"])
-        if zone == ZONE_STATION:
-            return station
-        name = self.coordinator.config_entry.options.get(zone_name_key(zone)) or generic.format(n=zone)
-        distance = zone_distance(self.device_data, zone)
-        return f"{name} ({distance} m)" if distance is not None else name
+    def _label(self, number: int, zone: StartZone | None) -> str:
+        automatic, generic = LABELS.get(self.hass.config.language[:2], LABELS["en"])
+        if zone is None:
+            return automatic
+        return f"{zone.name or generic.format(n=number)} ({zone.distance_m} m)"
 
     @property
     def _selected(self) -> int:
-        zone = self.coordinator.start_zone.get(self.device_id, ZONE_STATION)
-        return zone if zone in self._zones else ZONE_STATION
+        number = self.coordinator.start_zone.get(self.device_id, ZONE_AUTO)
+        return number if number in self._zones else ZONE_AUTO
 
     @property
     def options(self) -> list[str]:
-        return [self._label(zone) for zone in self._zones]
+        return [self._label(number, zone) for number, zone in self._zones.items()]
 
     @property
     def current_option(self) -> str | None:
-        return self._label(self._selected)
+        number = self._selected
+        return self._label(number, self._zones[number])
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"zone": self._selected, "distance_m": zone_distance(self.device_data, self._selected)}
+        zone = self._zones[self._selected]
+        return {
+            "zone": self._selected,
+            "distance_m": zone.distance_m if zone else 0,
+            "source": "automatic" if zone is None else ("mower" if zone.from_mower else "settings"),
+        }
 
     async def async_select_option(self, option: str) -> None:
-        for zone in self._zones:
-            if self._label(zone) == option:
-                self.coordinator.start_zone[self.device_id] = zone
+        for number, zone in self._zones.items():
+            if self._label(number, zone) == option:
+                self.coordinator.start_zone[self.device_id] = number
                 self.async_write_ha_state()
                 return
         raise ValueError(f"Unknown start zone: {option}")
