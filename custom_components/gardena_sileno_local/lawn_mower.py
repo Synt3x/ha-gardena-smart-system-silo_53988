@@ -10,6 +10,7 @@ from homeassistant.components.lawn_mower import (
     LawnMowerEntityFeature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -20,8 +21,10 @@ from .const import (
     DEFAULT_DOCK_MODE,
     DEFAULT_START_MINUTES,
     DOCK_FURTHER_NOTICE,
+    MAX_ZONES,
+    ZONE_STATION,
 )
-from .decode import GEN1_STATUS, is_gen1_mower
+from .decode import GEN1_STATUS, is_gen1_mower, zone_distance
 from .entity import GardenaEntity
 
 ACTIVITY = {
@@ -48,7 +51,12 @@ async def async_setup_entry(
         "start_mowing_for",
         {
             vol.Required("duration"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
-            vol.Optional("distance", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=500)),
+            vol.Exclusive("zone", "start_point"): vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=MAX_ZONES)
+            ),
+            vol.Exclusive("distance", "start_point"): vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=500)
+            ),
         },
         "async_start_mowing_for",
     )
@@ -74,13 +82,25 @@ class GardenaMower(GardenaEntity, LawnMowerEntity):
         return ACTIVITY.get(status[1]) if status and status[1] else None
 
     async def async_start_mowing(self) -> None:
+        """Start from the zone chosen in the Start zone selector."""
         minutes = self.coordinator.config_entry.options.get(
             CONF_START_MINUTES, DEFAULT_START_MINUTES
         )
-        await self.mower_start(minutes * 60)
+        zone = self.coordinator.start_zone.get(self.device_id, ZONE_STATION)
+        await self.mower_start(minutes * 60, self._zone_to_distance(zone))
 
-    async def async_start_mowing_for(self, duration: int, distance: int = 0) -> None:
-        await self.mower_start(duration * 60, distance)
+    async def async_start_mowing_for(
+        self, duration: int, zone: int | None = None, distance: int | None = None
+    ) -> None:
+        if zone is not None:
+            distance = self._zone_to_distance(zone)
+        await self.mower_start(duration * 60, distance or 0)
+
+    def _zone_to_distance(self, zone: int) -> int:
+        distance = zone_distance(self.device_data, zone)
+        if distance is None:
+            raise ServiceValidationError(f"The mower has no start zone {zone}")
+        return distance
 
     async def async_dock(self) -> None:
         """Dock mode is a setting: until next schedule (default) or until further notice."""

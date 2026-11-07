@@ -26,6 +26,8 @@ from .const import (
     DOCK_FURTHER_NOTICE,
     DOCK_NEXT_SCHEDULE,
     DOMAIN,
+    MAX_ZONES,
+    zone_name_key,
 )
 from .decode import is_gen1_mower
 
@@ -146,9 +148,15 @@ class GardenaSilenoConfigFlow(ConfigFlow, domain=DOMAIN):
 class GardenaSilenoOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            # Empty zone name = use the default "Zone N".
+            data = {key: value for key, value in user_input.items() if value not in ("", None)}
+            return self.async_create_entry(data=data)
+        zone_fields = {
+            vol.Optional(zone_name_key(zone)): str for zone in range(1, MAX_ZONES + 1)
+        }
         schema = vol.Schema(
             {
+                **zone_fields,
                 vol.Required(CONF_DOCK_MODE, default=DEFAULT_DOCK_MODE): SelectSelector(
                     SelectSelectorConfig(
                         options=[DOCK_NEXT_SCHEDULE, DOCK_FURTHER_NOTICE],

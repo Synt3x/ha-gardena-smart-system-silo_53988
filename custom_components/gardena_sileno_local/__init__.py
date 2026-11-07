@@ -21,6 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [
     Platform.LAWN_MOWER,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
@@ -40,6 +41,8 @@ class GardenaCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=SAFETY_REFRESH
         )
         self.client = client
+        # device id -> selected start zone (0 = charging station)
+        self.start_zone: dict[str, int] = {}
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         """Read the full state again."""
@@ -81,8 +84,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenaConfigEntry) -> b
         hass, _keep_connected(coordinator), f"{DOMAIN}_connection"
     )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    # Options are read when a command is sent, so changing them needs no reload.
+    # Options are read when used. Changing them only redraws entities (zone
+    # names), so the connection is kept.
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: GardenaConfigEntry) -> None:
+    entry.runtime_data.async_update_listeners()
 
 
 async def _keep_connected(coordinator: GardenaCoordinator) -> None:

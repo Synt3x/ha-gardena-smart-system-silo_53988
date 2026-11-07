@@ -250,6 +250,21 @@ def decode_lawn_coverage(raw: bytes | None) -> list[CoverageArea] | None:
     return areas
 
 
+def zone_distance(data: dict[str, Any], zone: int) -> int | None:
+    """Metres along the guide wire for a start zone. Zone 0 = charging station.
+
+    Verified: starting "Framsida" in the GARDENA app sent exactly this area's
+    distance (45 m) in mower_timer_with_distance.
+    """
+    if zone == 0:
+        return 0
+    areas = decode_lawn_coverage(get_value(data, f"{LEMONBEAT}/starting_points")) or []
+    for area in areas:
+        if area.area == zone:
+            return area.distance_m
+    return None
+
+
 @dataclass(frozen=True)
 class Position:
     latitude: float

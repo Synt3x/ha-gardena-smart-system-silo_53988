@@ -41,7 +41,11 @@
   "options": {
     "step": {
       "init": {
+        "description": "Zonnamn: GARDENA-appens zonnamn finns inte i klipparen, så namnge zon 1-3 här. Lämna tomt för 'Zon N'.",
         "data": {
+          "zone_1_name": "Namn på zon 1",
+          "zone_2_name": "Namn på zon 2",
+          "zone_3_name": "Namn på zon 3",
           "dock_mode": "Vad Docka-knappen gör",
           "start_minutes": "Klipptid för Start-knappen (minuter)"
         }
@@ -64,6 +68,10 @@
         "duration": {
           "name": "Tid",
           "description": "Minuter att klippa."
+        },
+        "zone": {
+          "name": "Startzon",
+          "description": "0 = laddstationen, 1-3 = klipparens startzoner. Använd detta eller avstånd."
         },
         "distance": {
           "name": "Startavstånd",
@@ -230,6 +238,11 @@
     "device_tracker": {
       "position": {
         "name": "Position"
+      }
+    },
+    "select": {
+      "start_zone": {
+        "name": "Startzon"
       }
     }
   }

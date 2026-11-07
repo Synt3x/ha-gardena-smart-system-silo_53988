@@ -45,6 +45,8 @@ model number 53988**, on gateway firmware **10.12.2**.
 
 - A **lawn mower** card: status, **Start** and **Dock**. You choose what Dock
   means (see [Step 4](#step-4-add-it-in-home-assistant)).
+- **Start zone** selector: pick the charging station or one of the mower's
+  zones (with your own names), then press Start. See [Zones](#zones).
 - **At a glance**: battery, status, *Problem* (on only while there's an active
   error) and *Schedule paused*.
 - **Planning**: next start, paused until, schedule, lawn coverage areas.
@@ -175,6 +177,7 @@ Error messages:
 
 | Option | Choices |
 |---|---|
+| Name of zone 1 / 2 / 3 | Your own names, e.g. `Framsida`. Empty = "Zone 1" … |
 | What the Dock button does | **Go home, mow again at the next scheduled time** (default), or **Go home and stay parked until started again** |
 | Mowing time for the Start button | Minutes, default 180 |
 
@@ -192,7 +195,8 @@ Shown by default:
 
 | Entity | Notes |
 |---|---|
-| Lawn mower | Start = mow for the configured time. Dock = your chosen park mode. |
+| Lawn mower | Start = mow for the configured time from the selected start zone. Dock = your chosen park mode. |
+| Start zone | Charging station or zone 1–3, shown as e.g. `Framsida (45 m)`. Remembered across restarts. |
 | Battery | %. Unavailable while the gateway can't reach the mower. |
 | Status | e.g. *Parked by user*, *Leaving charging station*, *Mowing (manual)*, *Searching for charging station*. Raw code in attribute `code`. |
 | Problem | On only while there's an active error. |
@@ -215,8 +219,18 @@ running time, charging cycles, guide wire length, raw settings (hex for
 decoding), report position for 1 hour (LONA, while parked).
 
 **Services** (for automations):
-- `gardena_sileno_local.start_mowing_for`: `duration` in minutes, optional
-  `distance` in metres along the guide wire (LONA).
+- `gardena_sileno_local.start_mowing_for`: `duration` in minutes, and either
+  `zone` (0 = charging station, 1–3) or `distance` in metres along the guide
+  wire (LONA).
+
+```yaml
+action: gardena_sileno_local.start_mowing_for
+target:
+  entity_id: lawn_mower.gardena_sileno
+data:
+  duration: 60
+  zone: 2
+```
 - `gardena_sileno_local.park_until_next_schedule`
 - `gardena_sileno_local.park_until_further_notice`
 
@@ -225,6 +239,24 @@ Download diagnostics gives the full raw state, with serial number and position
 removed. Attach it if you open an issue.
 
 ---
+
+## Zones
+
+On a 1st-generation SILENO a "zone" is a **start point along the guide wire**.
+The manual calls them *Lawn coverage, area 1–3*. The mower stores up to three,
+each with a distance from the charging station and a share of the starts.
+
+When you start a zone in the GARDENA app, the app sends the mower **only that
+zone's distance**. Starting "Framsida" (zone 4 in the app) sent
+`mower_timer_with_distance = 00 2d 00 00 0e 10`, which is 45 m and 3600 s. That
+matched the mower's zone 2 (45 m). So:
+
+- The zones you can start are the ones the mower reports. The integration
+  reads them, and the *Lawn coverage areas* sensor lists them with distances.
+- The app's own zone numbers and names (like "4" and "Framsida") live in the
+  GARDENA cloud, not on the mower. Name the zones yourself under **Configure**.
+- If you change a zone's distance in the app, the integration picks up the new
+  distance automatically.
 
 ## What is verified and what isn't
 
@@ -243,6 +275,7 @@ removed. Attach it if you open an issue.
 | **Start** (mow for N minutes) | ✅ Tested: the mower left the station, status went *Leaving* → *Mowing (manual)* |
 | **Park until further notice** | ✅ Tested: the gateway confirmed, status went to *Searching for charging station* |
 | Live position (LONA) | ✅ Decoded from real events, about every 3 seconds while mowing |
+| Start zone | ✅ The app's zone start was captured. The integration builds byte-identical commands from the mower's zone list |
 | Park until next schedule (default Dock mode) | 🟡 Payload from the official library. **Not tried on hardware yet** |
 | Position reporting while parked | 🟡 Payload from the official library, not tried |
 | Home Assistant runtime | 🟡 First beta. The code compiles and the gateway client was tested on its own, but it hasn't run inside Home Assistant yet |

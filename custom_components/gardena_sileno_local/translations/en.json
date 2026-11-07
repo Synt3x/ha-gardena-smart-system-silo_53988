@@ -41,7 +41,11 @@
   "options": {
     "step": {
       "init": {
+        "description": "Zone names: the GARDENA app's zone names are not stored on the mower, so name zones 1-3 here. Leave empty for 'Zone N'.",
         "data": {
+          "zone_1_name": "Name of zone 1",
+          "zone_2_name": "Name of zone 2",
+          "zone_3_name": "Name of zone 3",
           "dock_mode": "What the Dock button does",
           "start_minutes": "Mowing time for the Start button (minutes)"
         }
@@ -64,6 +68,10 @@
         "duration": {
           "name": "Duration",
           "description": "Minutes to mow."
+        },
+        "zone": {
+          "name": "Start zone",
+          "description": "0 = charging station, 1-3 = the mower's start zones. Use this or distance."
         },
         "distance": {
           "name": "Start distance",
@@ -230,6 +238,11 @@
     "device_tracker": {
       "position": {
         "name": "Position"
+      }
+    },
+    "select": {
+      "start_zone": {
+        "name": "Start zone"
       }
     }
   }

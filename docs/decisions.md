@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-11-07 – Start zones: selector + Start, names set in Home Assistant
+- **Area:** GUI / mower control
+- **Decision:** A *Start zone* selector (charging station, zone 1–3) decides where the mower's Start begins. Zone names are options in the integration. The service `start_mowing_for` takes `zone` or `distance`.
+- **Why:** Capturing a zone start from the GARDENA app showed that it sends only the zone's distance along the guide wire, which matched the mower's start area. The app's zone numbers and names are not on the mower, so they can't be read locally.
+- **Objection:** Claude suggested one button per zone (one tap). The owner chose selector + Start (fewer entities).
+- **Testing:** The command was not sent from Home Assistant. Its bytes match the app's captured command exactly. The owner asked not to test zones 1–2 because they had been changed.
+- **Level:** TEST
+
 ## 2026-11-07 – Publish as public beta 0.1.0 before running inside Home Assistant
 - **Area:** Release
 - **Decision:** Push to GitHub now and install via HACS, as beta 0.1.0.
