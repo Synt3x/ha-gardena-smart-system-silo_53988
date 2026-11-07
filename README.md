@@ -24,20 +24,49 @@ model number 53988**, on gateway firmware **10.12.2**.
 
 ---
 
+## Quick start
+
+You need Home Assistant with [HACS](https://hacs.xyz/docs/use/) installed, and
+the gateway's IP address.
+
+1. **Password:** the first 8 characters of the ID on the gateway's label.
+   ([details](#step-1-find-the-gateway-password))
+2. **Turn on the local API on the gateway** (one time). The commands are in
+   [Step 2](#step-2-turn-on-the-local-api-on-the-smart-gateway).
+3. **Add this repository to HACS and download it:**
+
+   [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Synt3x&repository=ha-gardena-smart-system-silo_53988&category=integration)
+
+   Then click **Download** → **Download**, and **restart Home Assistant**.
+   ([without the button](#step-3-install-the-integration))
+4. **Add the integration:**
+
+   [![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=gardena_sileno_local)
+
+   Enter the gateway IP address and the password. Leave the port at 8443.
+   ([details](#step-4-add-it-in-home-assistant))
+5. **Optional:** the integration → **Configure** → name your zones and choose
+   what Dock does.
+
+---
+
 ## Contents
 
-1. [What you get](#what-you-get)
-2. [Step 1: Find the gateway password](#step-1-find-the-gateway-password)
-3. [Step 2: Turn on the local API on the smart Gateway](#step-2-turn-on-the-local-api-on-the-smart-gateway)
-4. [Step 3: Install the integration](#step-3-install-the-integration)
-5. [Step 4: Add it in Home Assistant](#step-4-add-it-in-home-assistant)
-6. [Entities and services](#entities-and-services)
-7. [What is verified and what isn't](#what-is-verified-and-what-isnt)
-8. [How this was figured out](#how-this-was-figured-out)
-9. [Help decode the remaining fields](#help-decode-the-remaining-fields)
-10. [FAQ: Why does my LONA mower still bump into things?](#faq-why-does-my-lona-mower-still-bump-into-things)
-11. [Turning the local API off again](#turning-the-local-api-off-again)
-12. [Sources and credits](#sources-and-credits)
+1. [Quick start](#quick-start)
+2. [What you get](#what-you-get)
+3. [Step 1: Find the gateway password](#step-1-find-the-gateway-password)
+4. [Step 2: Turn on the local API on the smart Gateway](#step-2-turn-on-the-local-api-on-the-smart-gateway)
+5. [Step 3: Install the integration](#step-3-install-the-integration)
+6. [Step 4: Add it in Home Assistant](#step-4-add-it-in-home-assistant)
+7. [Troubleshooting](#troubleshooting)
+8. [Entities and services](#entities-and-services)
+9. [Zones](#zones)
+10. [What is verified and what isn't](#what-is-verified-and-what-isnt)
+11. [How this was figured out](#how-this-was-figured-out)
+12. [Help decode the remaining fields](#help-decode-the-remaining-fields)
+13. [FAQ: Why does my LONA mower still bump into things?](#faq-why-does-my-lona-mower-still-bump-into-things)
+14. [Turning the local API off again](#turning-the-local-api-off-again)
+15. [Sources and credits](#sources-and-credits)
 
 ---
 
@@ -145,22 +174,50 @@ on the gateway.
 
 ### With HACS (recommended)
 
-1. HACS → three-dot menu → **Custom repositories**.
-2. Repository: `https://github.com/Synt3x/ha-gardena-smart-system-silo_53988`,
-   type: **Integration** → Add.
-3. Search for **GARDENA SILENO local (gen 1)** → Download.
-4. Restart Home Assistant.
+If you don't have HACS yet, install it first by following
+[HACS: Download](https://hacs.xyz/docs/use/download/download/) and
+[HACS: Initial configuration](https://hacs.xyz/docs/use/configuration/basic/).
 
-### Manually
+**One click:** the *Open in HACS* button in [Quick start](#quick-start) does
+steps 1–3 below for you.
 
-Copy `custom_components/gardena_sileno_local` into your Home Assistant
-`config/custom_components/` folder and restart.
+**By hand:**
+
+1. In Home Assistant, open **HACS** in the sidebar.
+2. Click **⋮** (top right) → **Custom repositories**.
+3. Fill in:
+   - **Repository:** `https://github.com/Synt3x/ha-gardena-smart-system-silo_53988`
+   - **Type:** `Integration`
+
+   Click **Add**, then close the dialog.
+4. Search HACS for **GARDENA SILENO local (gen 1)** and open it.
+5. Click **Download** (bottom right) → **Download**.
+6. **Restart Home Assistant:** Settings → System → ⏻ (top right) →
+   **Restart Home Assistant**. The integration doesn't show up until you restart.
+
+**Updates:** HACS shows an update under *Settings → Updates* when a new
+version is pushed. Click it → **Install**, then restart Home Assistant.
+
+**Uninstall:** first remove the integration under *Settings → Devices &
+services*, then HACS → the repository → ⋮ → **Remove**, and restart.
+
+### Manually (without HACS)
+
+1. Download this repository (green **Code** button → **Download ZIP**).
+2. Copy the folder `custom_components/gardena_sileno_local` into your Home
+   Assistant `config/custom_components/` folder, for example with the *File
+   editor* or *Samba share* add-on. Create `custom_components` if it doesn't
+   exist.
+3. Restart Home Assistant.
 
 ---
 
 ## Step 4: Add it in Home Assistant
 
-**Settings → Devices & services → Add integration → GARDENA SILENO local (gen 1)**
+**One click:** the *Add integration* button in [Quick start](#quick-start).
+
+**By hand:** **Settings → Devices & services → + Add integration** (bottom
+right) → search for **GARDENA SILENO local (gen 1)**.
 
 | Field | What to enter |
 |---|---|
@@ -186,6 +243,34 @@ Both park variants are also separate buttons, so you can always pick the other o
 **New IP address or password?** Integration → ⋮ → **Reconfigure**. If the
 password stops working, Home Assistant asks for it again by itself. You don't
 need to remove and re-add the integration.
+
+After setup you get one device, **GARDENA SILENO**. Open it from *Settings →
+Devices & services → GARDENA SILENO local (gen 1)* to see all entities and add
+them to a dashboard.
+
+---
+
+## Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| The integration isn't in the *Add integration* list | Restart Home Assistant after downloading, then reload the browser page (Ctrl+F5). |
+| "Cannot reach the local API" | Check the IP address. Check that port 8443 is open ([Step 2](#check-that-its-on)). The setting can be lost after a gateway factory reset. |
+| "Wrong password" | Read the gateway label again. Only `0-9` and `a-f` are valid, so `f` vs `1` is the usual mistake. |
+| Entities show *Unavailable* | The gateway can't reach the mower, e.g. it's switched off or in winter storage. The *Mower online* diagnostic sensor shows this. |
+| Values look stale | Press the *Refresh state* button on the device (diagnostic section). |
+| Anything else | Turn on debug logging (below), reproduce the problem, and open an [issue](https://github.com/Synt3x/ha-gardena-smart-system-silo_53988/issues) with the log and the integration's diagnostics (⋮ → *Download diagnostics*). |
+
+Debug logging, in `configuration.yaml`:
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.gardena_sileno_local: debug
+```
+
+Or temporarily: the integration → ⋮ → **Enable debug logging**.
 
 ---
 
