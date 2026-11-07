@@ -1,0 +1,236 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "GARDENA smart Gateway (local)",
+        "description": "Enable WebSocket support on the gateway first (see the README). The password is the first 8 characters of the ID on the gateway's label.",
+        "data": {
+          "host": "Gateway IP address or hostname",
+          "password": "Password (first 8 characters of the gateway ID)",
+          "port": "Port"
+        }
+      },
+      "reconfigure": {
+        "title": "Change gateway address or password",
+        "data": {
+          "host": "Gateway IP address or hostname",
+          "password": "Password (first 8 characters of the gateway ID)",
+          "port": "Port"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Gateway password rejected",
+        "description": "Enter the first 8 characters of the ID on the gateway's label.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong password. Check the first 8 characters of the ID on the gateway's label.",
+      "different_mower": "That gateway reports a different mower than this integration was set up for.",
+      "cannot_connect": "Cannot reach the local API. Check the IP address and that WebSocket support is enabled on the gateway.",
+      "no_mower": "Connected, but found no 1st-generation SILENO mower."
+    },
+    "abort": {
+      "already_configured": "This mower is already set up. The address and password were updated.",
+      "reauth_successful": "Password updated.",
+      "reconfigure_successful": "Settings updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "dock_mode": "What the Dock button does",
+          "start_minutes": "Mowing time for the Start button (minutes)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "dock_mode": {
+      "options": {
+        "next_schedule": "Go home, mow again at the next scheduled time",
+        "further_notice": "Go home and stay parked until started again"
+      }
+    }
+  },
+  "services": {
+    "start_mowing_for": {
+      "name": "Start mowing for a duration",
+      "description": "Starts mowing for the given time, overriding the schedule.",
+      "fields": {
+        "duration": {
+          "name": "Duration",
+          "description": "Minutes to mow."
+        },
+        "distance": {
+          "name": "Start distance",
+          "description": "LONA mowers: metres along the guide wire to start from. 0 = default."
+        }
+      }
+    },
+    "park_until_further_notice": {
+      "name": "Park until further notice",
+      "description": "Parks the mower and pauses the schedule until it is started again."
+    },
+    "park_until_next_schedule": {
+      "name": "Park until next schedule",
+      "description": "Parks the mower and lets the schedule start it again."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "paused": "Paused",
+          "mowing_schedule": "Mowing (schedule)",
+          "searching_station": "Searching for charging station",
+          "charging": "Charging",
+          "leaving_station": "Leaving charging station",
+          "waiting_software_update": "Waiting for software update",
+          "waiting_power_up": "Waiting for power-up",
+          "parked_week_timer": "Parked (week timer)",
+          "parked_by_user": "Parked by user",
+          "off_main_switch": "Off (main switch)",
+          "waiting_stop_pressed": "Waiting (STOP pressed)",
+          "status_unknown": "Unknown",
+          "error": "Error",
+          "error_power_up": "Error at power-up",
+          "waiting": "Waiting",
+          "mowing_manual": "Mowing (manual)",
+          "parked_auto_timer": "Parked (auto timer)",
+          "parked_day_limit": "Parked (daily limit)",
+          "parked_frost": "Parked (frost)"
+        }
+      },
+      "last_error": {
+        "name": "Last recorded error",
+        "state": {
+          "no_error": "No error",
+          "outside_working_area": "Outside working area",
+          "no_loop_signal": "No loop signal",
+          "wrong_loop_signal": "Wrong loop signal",
+          "loop_sensor_front": "Loop sensor problem, front",
+          "loop_sensor_rear": "Loop sensor problem, rear",
+          "loop_sensor_left": "Loop sensor problem, left",
+          "loop_sensor_right": "Loop sensor problem, right",
+          "wrong_pin_code": "Wrong PIN code",
+          "trapped": "Trapped",
+          "upside_down": "Upside down",
+          "low_battery": "Low battery",
+          "empty_battery": "Empty battery",
+          "no_drive": "No drive",
+          "mower_lifted": "Mower lifted",
+          "lifted": "Lifted",
+          "stuck_in_charging_station": "Stuck in charging station",
+          "charging_station_blocked": "Charging station blocked",
+          "collision_sensor_rear": "Collision sensor problem, rear",
+          "collision_sensor_front": "Collision sensor problem, front",
+          "wheel_motor_blocked_right": "Wheel motor blocked, right",
+          "wheel_motor_blocked_left": "Wheel motor blocked, left",
+          "wheel_drive_right": "Wheel drive problem, right",
+          "wheel_drive_left": "Wheel drive problem, left",
+          "cutting_system_blocked": "Cutting system blocked",
+          "invalid_device_combination": "Invalid sub-device combination",
+          "settings_restored": "Settings restored",
+          "memory_circuit_problem": "Memory circuit problem",
+          "slope_too_steep": "Slope too steep",
+          "charging_system_problem": "Charging system problem",
+          "stop_button_problem": "STOP button problem",
+          "tilt_sensor_problem": "Tilt sensor problem",
+          "mower_tilted": "Mower tilted",
+          "cutting_stopped_slope": "Cutting stopped, slope too steep",
+          "wheel_motor_overloaded_right": "Wheel motor overloaded, right",
+          "wheel_motor_overloaded_left": "Wheel motor overloaded, left",
+          "charging_current_too_high": "Charging current too high",
+          "electronic_problem": "Electronic problem",
+          "cutting_motor_problem": "Cutting motor problem",
+          "no_response_from_charger": "No response from charger",
+          "guide_1_not_found": "Guide 1 not found",
+          "guide_2_not_found": "Guide 2 not found",
+          "guide_3_not_found": "Guide 3 not found",
+          "gps_navigation_problem": "GPS navigation problem",
+          "weak_gps_signal": "Weak GPS signal",
+          "difficult_finding_home": "Difficult finding home",
+          "guide_calibration_done": "Guide calibration accomplished",
+          "guide_calibration_failed": "Guide calibration failed",
+          "temporary_battery_problem": "Temporary battery problem"
+        }
+      },
+      "last_error_time": {
+        "name": "Last error time"
+      },
+      "next_start": {
+        "name": "Next start",
+        "state_attributes": {
+          "source": {
+            "name": "Source"
+          }
+        }
+      },
+      "paused_until": {
+        "name": "Paused until"
+      },
+      "schedule": {
+        "name": "Schedule"
+      },
+      "lawn_coverage": {
+        "name": "Lawn coverage areas"
+      },
+      "cutting_time": {
+        "name": "Cutting time"
+      },
+      "running_time": {
+        "name": "Running time"
+      },
+      "charging_cycles": {
+        "name": "Charging cycles"
+      },
+      "collisions": {
+        "name": "Collisions"
+      },
+      "rf_link_quality": {
+        "name": "Radio link quality"
+      },
+      "guide_wire_length": {
+        "name": "Guide wire length"
+      },
+      "settings_raw": {
+        "name": "Raw settings"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Mower online"
+      },
+      "problem": {
+        "name": "Problem"
+      },
+      "schedule_paused": {
+        "name": "Schedule paused"
+      }
+    },
+    "button": {
+      "park_until_next_schedule": {
+        "name": "Park until next schedule"
+      },
+      "park_until_further_notice": {
+        "name": "Park until further notice"
+      },
+      "start_position_reporting": {
+        "name": "Report position for 1 hour"
+      },
+      "refresh": {
+        "name": "Refresh state"
+      }
+    },
+    "device_tracker": {
+      "position": {
+        "name": "Position"
+      }
+    }
+  }
+}

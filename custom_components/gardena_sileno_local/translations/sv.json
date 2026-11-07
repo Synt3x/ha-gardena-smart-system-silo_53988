@@ -1,0 +1,236 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "GARDENA smart Gateway (lokalt)",
+        "description": "Slå först på WebSocket-stöd på gatewayen (se README). Lösenordet är de första 8 tecknen i ID:t på gatewayens etikett.",
+        "data": {
+          "host": "Gatewayens IP-adress eller värdnamn",
+          "password": "Lösenord (första 8 tecknen i gateway-ID)",
+          "port": "Port"
+        }
+      },
+      "reconfigure": {
+        "title": "Ändra gatewayens adress eller lösenord",
+        "data": {
+          "host": "Gatewayens IP-adress eller värdnamn",
+          "password": "Lösenord (första 8 tecknen i gateway-ID)",
+          "port": "Port"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Gatewayen nekade lösenordet",
+        "description": "Ange de första 8 tecknen i ID:t på gatewayens etikett.",
+        "data": {
+          "password": "Lösenord"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Fel lösenord. Kontrollera de första 8 tecknen i ID:t på gatewayens etikett.",
+      "different_mower": "Den gatewayen rapporterar en annan klippare än den här integrationen sattes upp för.",
+      "cannot_connect": "Når inte det lokala API:t. Kontrollera IP-adressen och att WebSocket-stöd är påslaget på gatewayen.",
+      "no_mower": "Ansluten, men hittade ingen SILENO av första generationen."
+    },
+    "abort": {
+      "already_configured": "Den här klipparen är redan konfigurerad. Adress och lösenord uppdaterades.",
+      "reauth_successful": "Lösenordet uppdaterades.",
+      "reconfigure_successful": "Inställningarna uppdaterades."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "dock_mode": "Vad Docka-knappen gör",
+          "start_minutes": "Klipptid för Start-knappen (minuter)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "dock_mode": {
+      "options": {
+        "next_schedule": "Åk hem, klipp igen vid nästa schemalagda tid",
+        "further_notice": "Åk hem och stå parkerad tills den startas igen"
+      }
+    }
+  },
+  "services": {
+    "start_mowing_for": {
+      "name": "Starta klippning en viss tid",
+      "description": "Startar klippning i angiven tid och går före schemat.",
+      "fields": {
+        "duration": {
+          "name": "Tid",
+          "description": "Minuter att klippa."
+        },
+        "distance": {
+          "name": "Startavstånd",
+          "description": "LONA-klippare: meter längs guidekabeln att starta från. 0 = standard."
+        }
+      }
+    },
+    "park_until_further_notice": {
+      "name": "Parkera tills vidare",
+      "description": "Parkerar klipparen och pausar schemat tills den startas igen."
+    },
+    "park_until_next_schedule": {
+      "name": "Parkera till nästa schema",
+      "description": "Parkerar klipparen och låter schemat starta den igen."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "paused": "Pausad",
+          "mowing_schedule": "Klipper (schema)",
+          "searching_station": "Söker laddstation",
+          "charging": "Laddar",
+          "leaving_station": "Lämnar laddstation",
+          "waiting_software_update": "Väntar på programuppdatering",
+          "waiting_power_up": "Väntar på uppstart",
+          "parked_week_timer": "Parkerad (veckoschema)",
+          "parked_by_user": "Parkerad av användare",
+          "off_main_switch": "Avstängd (huvudbrytare)",
+          "waiting_stop_pressed": "Väntar (STOP intryckt)",
+          "status_unknown": "Okänd",
+          "error": "Fel",
+          "error_power_up": "Fel vid uppstart",
+          "waiting": "Väntar",
+          "mowing_manual": "Klipper (manuellt)",
+          "parked_auto_timer": "Parkerad (autotimer)",
+          "parked_day_limit": "Parkerad (dagsgräns)",
+          "parked_frost": "Parkerad (frost)"
+        }
+      },
+      "last_error": {
+        "name": "Senast registrerade fel",
+        "state": {
+          "no_error": "Inget fel",
+          "outside_working_area": "Utanför arbetsområdet",
+          "no_loop_signal": "Ingen slingsignal",
+          "wrong_loop_signal": "Fel slingsignal",
+          "loop_sensor_front": "Slingsensor fram",
+          "loop_sensor_rear": "Slingsensor bak",
+          "loop_sensor_left": "Slingsensor vänster",
+          "loop_sensor_right": "Slingsensor höger",
+          "wrong_pin_code": "Fel PIN-kod",
+          "trapped": "Instängd",
+          "upside_down": "Upp och ner",
+          "low_battery": "Låg batterinivå",
+          "empty_battery": "Tomt batteri",
+          "no_drive": "Ingen drivning",
+          "mower_lifted": "Klipparen lyft",
+          "lifted": "Lyft",
+          "stuck_in_charging_station": "Fast i laddstationen",
+          "charging_station_blocked": "Laddstationen blockerad",
+          "collision_sensor_rear": "Kollisionssensor bak",
+          "collision_sensor_front": "Kollisionssensor fram",
+          "wheel_motor_blocked_right": "Hjulmotor blockerad höger",
+          "wheel_motor_blocked_left": "Hjulmotor blockerad vänster",
+          "wheel_drive_right": "Hjuldrivning höger",
+          "wheel_drive_left": "Hjuldrivning vänster",
+          "cutting_system_blocked": "Klippsystem blockerat",
+          "invalid_device_combination": "Ogiltig kombination av enheter",
+          "settings_restored": "Inställningar återställda",
+          "memory_circuit_problem": "Minneskretsproblem",
+          "slope_too_steep": "För brant lutning",
+          "charging_system_problem": "Laddsystemproblem",
+          "stop_button_problem": "STOP-knappsproblem",
+          "tilt_sensor_problem": "Lutningssensorproblem",
+          "mower_tilted": "Klipparen lutar",
+          "cutting_stopped_slope": "Klippning stoppad, för brant",
+          "wheel_motor_overloaded_right": "Hjulmotor överbelastad höger",
+          "wheel_motor_overloaded_left": "Hjulmotor överbelastad vänster",
+          "charging_current_too_high": "För hög laddström",
+          "electronic_problem": "Elektronikproblem",
+          "cutting_motor_problem": "Klippmotorproblem",
+          "no_response_from_charger": "Inget svar från laddaren",
+          "guide_1_not_found": "Guidekabel 1 hittas inte",
+          "guide_2_not_found": "Guidekabel 2 hittas inte",
+          "guide_3_not_found": "Guidekabel 3 hittas inte",
+          "gps_navigation_problem": "GPS-navigeringsproblem",
+          "weak_gps_signal": "Svag GPS-signal",
+          "difficult_finding_home": "Svårt att hitta hem",
+          "guide_calibration_done": "Guidekalibrering klar",
+          "guide_calibration_failed": "Guidekalibrering misslyckades",
+          "temporary_battery_problem": "Tillfälligt batteriproblem"
+        }
+      },
+      "last_error_time": {
+        "name": "Tid för senaste fel"
+      },
+      "next_start": {
+        "name": "Nästa start",
+        "state_attributes": {
+          "source": {
+            "name": "Källa"
+          }
+        }
+      },
+      "paused_until": {
+        "name": "Pausad till"
+      },
+      "schedule": {
+        "name": "Schema"
+      },
+      "lawn_coverage": {
+        "name": "Områden (Lawn coverage)"
+      },
+      "cutting_time": {
+        "name": "Klipptid"
+      },
+      "running_time": {
+        "name": "Körtid"
+      },
+      "charging_cycles": {
+        "name": "Laddcykler"
+      },
+      "collisions": {
+        "name": "Kollisioner"
+      },
+      "rf_link_quality": {
+        "name": "Radiolänk"
+      },
+      "guide_wire_length": {
+        "name": "Guidekabelns längd"
+      },
+      "settings_raw": {
+        "name": "Rådata inställningar"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Klippare online"
+      },
+      "problem": {
+        "name": "Problem"
+      },
+      "schedule_paused": {
+        "name": "Schema pausat"
+      }
+    },
+    "button": {
+      "park_until_next_schedule": {
+        "name": "Parkera till nästa schema"
+      },
+      "park_until_further_notice": {
+        "name": "Parkera tills vidare"
+      },
+      "start_position_reporting": {
+        "name": "Rapportera position i 1 timme"
+      },
+      "refresh": {
+        "name": "Läs om status"
+      }
+    },
+    "device_tracker": {
+      "position": {
+        "name": "Position"
+      }
+    }
+  }
+}

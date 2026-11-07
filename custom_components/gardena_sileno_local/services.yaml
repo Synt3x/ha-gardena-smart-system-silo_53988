@@ -1,0 +1,34 @@
+start_mowing_for:
+  target:
+    entity:
+      integration: gardena_sileno_local
+      domain: lawn_mower
+  fields:
+    duration:
+      required: true
+      default: 180
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
+    distance:
+      required: false
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 500
+          unit_of_measurement: m
+
+park_until_next_schedule:
+  target:
+    entity:
+      integration: gardena_sileno_local
+      domain: lawn_mower
+
+park_until_further_notice:
+  target:
+    entity:
+      integration: gardena_sileno_local
+      domain: lawn_mower
