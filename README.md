@@ -1,3 +1,5 @@
+<img src="custom_components/gardena_sileno_local/brand/icon.png" alt="" width="96" align="right">
+
 # GARDENA SILENO local (gen 1) for Home Assistant
 
 A Home Assistant custom integration (HACS) that reads and controls a
@@ -278,6 +280,9 @@ Or temporarily: the integration → ⋮ → **Enable debug logging**.
 ---
 
 ## Entities and services
+
+The integration ships its own icon in `custom_components/gardena_sileno_local/brand/`.
+Home Assistant 2026.3 and later shows it. Older versions show a placeholder.
 
 Shown by default:
 
