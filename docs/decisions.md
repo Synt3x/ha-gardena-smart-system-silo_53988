@@ -2,6 +2,49 @@
 
 Newest first.
 
+## 2026-11-10 – Audit against GARDENA's schema and live data
+- **Area:** data / GUI / docs
+- **Method:** Compared `decode.py` with GARDENA's schema for model 53988 and its library, and with live values read from the owner's Home Assistant (running 0.3.1): all entity states, 3 days of history, the diagnostics payload and the log.
+- **Changed:**
+  - Error table extended from code 59 to 78 (Automower numbering). A code outside the table shows *Unknown error code* instead of *Unknown*.
+  - A position of exactly 0, 0 (no fix) is ignored, so the mower is never drawn at 0° N 0° E.
+  - *Problem* got the attribute `error_codes` (the mower's current codes, `device/0/error_code`).
+  - *Position timer* got a real unit (s). New hidden diagnostic *Position update interval* (LONA, 3000 ms on the owner's mower).
+  - Icons for every entity and service (`icons.json`).
+  - Diagnostics show binary fields as hex too, and whether the gateway is connected.
+  - If reading one gateway service fails during a re-read, its devices are kept instead of dropped.
+  - The `distance` field of `start_mowing_for` no longer has a default of 0. A prefilled distance collided with `zone`.
+- **Removed (owner's decision, from the list of always-empty values):** the sensors *Start delay* and *Manual operation* (always 0), *Supported starting points* and *Supported wires* (constant 3 and 4), and the button *Report position for 1 hour* (the Continuous position reporting switch replaces it). Their registry entries are deleted at setup. The raw values are still in the diagnostics download.
+- **Kept hidden:** guide wire length (0 = never measured), status message, UTC offset, internal connection state, raw settings, position timer.
+- **Left alone on purpose:**
+  - GNSS accuracy stays a raw attribute. 778–853 at the station; the unit (mm or cm) isn't known, so it isn't used as the tracker's accuracy.
+  - No buttons for the mower's command resource (measure radio link, trigger data update, measure guide wire length). They write to the mower and need a supervised test first.
+  - No control for the position update interval, for the same reason.
+- **Verified by the live data:** the 1970 *Paused until* bug exists in 0.3.1 (shown for 7 min on 2026-11-07) and is fixed in this code. The last-error time is local time written as epoch; the decoding is right. No errors or warnings in the Home Assistant log.
+- **Level:** TEST (compiles; not yet run in Home Assistant)
+
+## 2026-11-10 – 0.4.0: continuous position, Mowing ends, zones 1–4, versions, diagnostics
+- **Area:** GUI / data / mower control
+- **Decision:**
+  - *Continuous position reporting* switch (LONA, on by default): writes `position_timer = 3600` while the mower is away from the station, re-arms every 50 min and whenever the mower sets the timer to 0 (at most once a minute). Not armed at the station.
+  - *Mowing ends* timestamp sensor: report ts of the start command + its seconds, only while leaving_station / mowing_manual.
+  - Start zone always lists Automatic + zone 1–4. An unset zone shows "not set" and can't be started.
+  - Status 14 = the app's "Disabled. Manual start needed": shown as an error (lawn mower *Error*, *Problem* on), not paused. Seen after park until further notice: the mower docked, then went to 14 in the station (GPS 0 m from the dock, no error code). The owner wants it to stand out, since the mower is neither parked normally nor running.
+  - The position switch re-arms only while the mower moves (mowing, leaving, returning). A stopped mower's last position stays shown.
+  - New sensors: start distance and requested run time (last start command), versions (software, mainboard, MMI, LONA fw/boot), and hidden raw diagnostics.
+- **Why:**
+  - Live data: the mower reported position only while leaving the station; at mowing_manual it wrote `position_timer = 0` and positions stopped. The owner wants the position always.
+  - Not armed at the station: the position doesn't change there and GNSS scatter (~25 m seen between two dock fixes) would write ~1 200 rows an hour.
+  - The owner wants the list to match the app (Automatic + 4 zones).
+- **Captured:** Kortsida (app zone, start closest to the station) sent `00 03 00 00 0e 10` = 3 m, 1 h, and reached mowing_manual.
+- **Level:** TEST (the switch and Mowing ends haven't run in Home Assistant yet)
+
+## 2026-11-10 – Automatic = the app's "According to starting points" (verified)
+- **Area:** mower control
+- **Finding:** Starting with "According to starting points" in the app wrote `mower_timer_with_distance = 00 00 00 00 0e 10` (distance 0 m, 3600 s). That's the same command Automatic sends from Home Assistant, so no code change. The mower picks the start point itself from its Lawn coverage shares (25 m 30 %, 45 m 20 %, 11 m 30 %, the station the rest).
+- **Also seen:** latitude/longitude didn't update during this run while the Position tracker and *Report position* button were disabled by the user.
+- **Level:** VERIFIED
+
 ## 2026-11-07 – 0.3.0: app zones entered by hand, Automatic, GPS sensors, fixes
 - **Area:** GUI / data
 - **Decision:**

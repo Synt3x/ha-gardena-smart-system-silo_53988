@@ -83,8 +83,20 @@ byte goes `07` → `1f` when the mower starts.
 - **Park until next schedule** (the default Dock mode). Send it while the mower
   is out, check that it goes home, and that *Next start* shows the next
   scheduled time.
-- **Position reporting while parked** (`position_timer`).
 - Starting a configured zone from Home Assistant (item 1).
+- **Continuous position reporting** switch and **Mowing ends** during a real
+  run, including a charge trip (does *Mowing ends* come back after charging?).
+- What `position_timer` reports after it's set to 3600: does it count down?
+
+## 6b. From the 2026-11-10 audit, needs a supervised test first
+
+- Buttons for the mower's `command` resource: measure radio link (7), trigger
+  data update (21), measure guide wire length (51). *Guide wire length* is 0
+  (never measured) on the owner's mower, so the last one could fill it.
+- A number entity for `position_update_interval` (3000 ms today). A longer
+  interval would cut database writes while mowing.
+- Find the unit of the GNSS accuracy value (778–853 at the station), then use
+  it as the tracker's accuracy.
 
 ## 7. Smaller improvements from the product review
 
@@ -93,3 +105,5 @@ byte goes `07` → `1f` when the mower starts.
   instead of the gateway's raw error.
 - Translated exception messages.
 - A GitHub release per version, so HACS shows "0.3.0" instead of a commit hash.
+- Start zone labels ("Automatic", "Zone 1", "not set") are hard-coded for
+  English and Swedish in `select.py` instead of the translation files.

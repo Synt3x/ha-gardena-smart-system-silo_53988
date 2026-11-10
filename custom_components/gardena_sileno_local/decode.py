@@ -38,7 +38,10 @@ GEN1_STATUS: dict[int, tuple[str, str | None]] = {
     11: ("status_unknown", None),
     12: ("error", "error"),
     13: ("error_power_up", "error"),
-    14: ("waiting", "paused"),
+    # The app calls 14 "Disabled. Manual start needed". Seen 2026-11-10 in the
+    # station after park until further notice. It won't move until started, so
+    # it's shown as an error (owner's choice).
+    14: ("waiting", "error"),
     15: ("mowing_manual", "mowing"),
     16: ("parked_auto_timer", "docked"),
     17: ("parked_day_limit", "docked"),
@@ -98,7 +101,16 @@ ERROR_CODES: dict[int, str] = {
     37: "charging_current_too_high",
     38: "electronic_problem",
     39: "cutting_motor_problem",
+    40: "limited_cutting_height_range",
+    41: "unexpected_cutting_height_adjustment",
+    42: "limited_cutting_height_range",
+    43: "cutting_height_problem_drive",
+    44: "cutting_height_problem_current",
+    45: "cutting_height_problem_direction",
+    46: "cutting_height_blocked",
+    47: "cutting_height_problem",
     48: "no_response_from_charger",
+    49: "ultrasonic_problem",
     50: "guide_1_not_found",
     51: "guide_2_not_found",
     52: "guide_3_not_found",
@@ -109,7 +121,35 @@ ERROR_CODES: dict[int, str] = {
     57: "guide_calibration_failed",
     58: "temporary_battery_problem",
     59: "temporary_battery_problem",
+    60: "temporary_battery_problem",
+    61: "temporary_battery_problem",
+    62: "battery_restriction_temperature",
+    63: "temporary_battery_problem",
+    64: "temporary_battery_problem",
+    65: "temporary_battery_problem",
+    66: "battery_problem",
+    67: "battery_problem",
+    68: "temporary_battery_problem",
+    69: "alarm_mower_switched_off",
+    70: "alarm_mower_stopped",
+    71: "alarm_mower_lifted",
+    72: "alarm_mower_tilted",
+    73: "alarm_mower_in_motion",
+    74: "alarm_outside_geofence",
+    75: "connection_changed",
+    76: "connection_not_changed",
+    77: "com_board_not_available",
+    78: "slipped",
 }
+# Shown for a code that isn't in the table; the number is in the "code" attribute.
+UNKNOWN_ERROR = "unknown_code"
+
+
+def error_key(code: Any) -> str | None:
+    """State key for an error code. None only when the mower reports no code."""
+    if not isinstance(code, int):
+        return None
+    return ERROR_CODES.get(code, UNKNOWN_ERROR)
 
 _VALUE_KEYS = ("vi", "vf", "vb", "vs", "vo", "ai", "as")
 _LATLON_SCALE = 1e-7
@@ -186,6 +226,11 @@ def decode_paused_until(raw: bytes | None) -> PausedUntil | None:
         return PausedUntil(datetime(year, raw[2], raw[3], raw[4], raw[5]), False)
     except ValueError:
         return None
+
+
+def mower_activity(data: dict[str, Any]) -> str | None:
+    status = GEN1_STATUS.get(get_value(data, f"{LEMONBEAT}/status"))
+    return status[1] if status else None
 
 
 _WEEKDAYS = [(0x02, "Mon"), (0x04, "Tue"), (0x08, "Wed"), (0x10, "Thu"),
@@ -271,7 +316,9 @@ def decode_lawn_coverage(raw: bytes | None) -> list[CoverageArea] | None:
 #   of the app's LONA zones;
 # - otherwise zone 1-3 falls back to the mower's start area N.
 # Zone 0 = automatic: distance 0, which GARDENA's library calls the "default
-# starting point". In a live test the mower drove out by itself for ~80 s.
+# starting point". Verified: the app's "According to starting points" sends
+# exactly this (00 00 + seconds); the mower then picks a start point from its
+# Lawn coverage shares.
 
 ZONE_AUTO = 0
 # The GARDENA app allows at most 4 zones, each with its own start point.
@@ -290,12 +337,16 @@ def zone_distance_key(zone: int) -> str:
 class StartZone:
     number: int
     name: str | None
-    distance_m: int
+    distance_m: int | None  # None = not set yet; can't be started
     from_mower: bool
 
 
 def start_zones(data: dict[str, Any], options: Mapping[str, Any]) -> list[StartZone]:
-    """The zones the user can start, excluding Automatic, in number order."""
+    """Zones 1-4 (the app's maximum), excluding Automatic, in number order.
+
+    All four are always listed so the list matches the app; a zone without a
+    distance (from the options or the mower's start area) has distance_m None.
+    """
     areas = {
         area.area: area.distance_m
         for area in decode_lawn_coverage(get_value(data, f"{LEMONBEAT}/starting_points")) or []
@@ -308,13 +359,15 @@ def start_zones(data: dict[str, Any], options: Mapping[str, Any]) -> list[StartZ
             zones.append(StartZone(number, name, int(custom), from_mower=False))
         elif number in areas:
             zones.append(StartZone(number, name, areas[number], from_mower=True))
+        else:
+            zones.append(StartZone(number, name, None, from_mower=False))
     return zones
 
 
 def start_zone_distance(
     data: dict[str, Any], options: Mapping[str, Any], zone: int
 ) -> int | None:
-    """Metres along the guide wire for a zone number. None = no such zone."""
+    """Metres along the guide wire for a zone number. None = no such zone or not set."""
     if zone == ZONE_AUTO:
         return 0
     for start_zone in start_zones(data, options):
@@ -343,6 +396,9 @@ def decode_position(raw: bytes | None) -> Position | None:
     (glat, glon, gacc, lat, lon, heading, ready, compass, calibrated) = struct.unpack(
         ">2iI2ih?h?", raw
     )
+    if lat == 0 and lon == 0:
+        # No fix yet. Don't put the mower at 0, 0 on the map.
+        return None
     return Position(
         latitude=lat * _LATLON_SCALE,
         longitude=lon * _LATLON_SCALE,
@@ -362,6 +418,56 @@ def encode_start_mowing(seconds: int, meters_from_station: int = 0) -> bytes:
     seconds = 0 means "park until next schedule" per the official library.
     """
     return meters_from_station.to_bytes(2, "big") + seconds.to_bytes(4, "big")
+
+
+# Statuses during a timed start (app, Home Assistant, or the mower's buttons).
+_TIMED_RUN_STATUSES = {4, 15}  # leaving_station, mowing_manual
+
+
+def timed_run_end_ts(data: dict[str, Any]) -> int | None:
+    """Unix seconds when the current timed start ends, or None.
+
+    The start command (mower_timer_with_distance on LONA, otherwise
+    mower_timer) holds the duration; its report timestamp is when it was sent.
+    Only meaningful while the mower is on such a run.
+    """
+    if get_value(data, f"{LEMONBEAT}/status") not in _TIMED_RUN_STATUSES:
+        return None
+    field = get_field(data, f"{LEMONBEAT}/mower_timer_with_distance")
+    raw = field_value(field)
+    if isinstance(raw, (bytes, bytearray)) and len(raw) == 6:
+        seconds = int.from_bytes(raw[2:6], "big")
+    else:
+        field = get_field(data, f"{LEMONBEAT}/mower_timer")
+        seconds = field_value(field)
+    ts = field.get("ts") if field else None
+    if not isinstance(seconds, int) or seconds <= 0 or not isinstance(ts, int):
+        return None
+    return ts + seconds
+
+
+@dataclass(frozen=True)
+class StartCommand:
+    distance_m: int
+    seconds: int
+
+
+def decode_start_command(raw: bytes | None) -> StartCommand | None:
+    """mower_timer_with_distance as last written by the app or Home Assistant.
+
+    Seen: 00 00 00 00 0e 10 = automatic, 1 h; 00 03 00 00 0e 10 = 3 m, 1 h;
+    all zeros after a park.
+    """
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) != 6:
+        return None
+    return StartCommand(int.from_bytes(raw[0:2], "big"), int.from_bytes(raw[2:6], "big"))
+
+
+def decode_version_bytes(raw: bytes | None) -> str | None:
+    """LONA firmware versions: 02 0b 00 00 ... = 2.11.0. All zeros = none."""
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) < 3 or not any(raw):
+        return None
+    return ".".join(str(b) for b in raw[:3])
 
 
 def opaque_payload(raw: bytes) -> dict[str, str]:

@@ -147,12 +147,20 @@ class GardenaLocalClient:
         for service, result in zip(SERVICES, results):
             if isinstance(result, BaseException):
                 _LOGGER.debug("Discovery on %s failed: %s", service, result)
+                # Keep what we knew about this service's devices.
+                found.update(
+                    {
+                        device_id: device
+                        for device_id, device in self.devices.items()
+                        if device["service"] == service
+                    }
+                )
                 continue
             for device_id, objects in (result.get("payload") or {}).items():
                 if device_id.startswith("_") or not isinstance(objects, dict):
                     continue
                 found[device_id] = {"service": service, "data": objects}
-        if not found and all(isinstance(r, BaseException) for r in results):
+        if all(isinstance(r, BaseException) for r in results):
             raise CannotConnect(f"Discovery failed: {results[0]}")
         self.devices = found
         self._notify()

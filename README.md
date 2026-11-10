@@ -76,8 +76,8 @@ the gateway's IP address.
 
 - A **lawn mower** card: status, **Start** and **Dock**. You choose what Dock
   means (see [Step 4](#step-4-add-it-in-home-assistant)).
-- **Start zone** selector: pick the charging station or one of the mower's
-  zones (with your own names), then press Start. See [Zones](#zones).
+- **Start zone** selector: pick *Automatic* or one of your four zones (with
+  your own names), then press Start. See [Zones](#zones).
 - **At a glance**: battery, status, *Problem* (on only while there's an active
   error) and *Schedule paused*.
 - **Planning**: next start, paused until, schedule, lawn coverage areas.
@@ -85,6 +85,9 @@ the gateway's IP address.
   are there too but disabled by default.
 - **Buttons**: park until next schedule, park until further notice.
 - **Live position on the map** while the mower is out (LONA only, every ~3 s).
+  The *Continuous position reporting* switch keeps it going, because the mower
+  stops reporting by itself when it starts mowing.
+- **Mowing ends**: when the current timed run is over.
 - **Push updates**: the gateway sends changes within a second. A full re-read
   every 15 minutes is the safety net.
 - Status and error texts in **English and Swedish**.
@@ -289,10 +292,12 @@ Shown by default:
 | Entity | Notes |
 |---|---|
 | Lawn mower | Start = mow for the configured time from the selected start zone. Dock = your chosen park mode. |
-| Start zone | **Automatic** (default) or one of your zones, shown as e.g. `Framsida (45 m)`. Remembered across restarts. |
+| Start zone | **Automatic** (default, same as the app's *According to starting points*) or zone 1–4, shown as e.g. `Framsida (45 m)`. A zone without a distance shows *not set*. Remembered across restarts. |
+| Mowing ends | During a timed start (app or Home Assistant): when the run ends, shown as e.g. "in 42 minutes". *Unknown* otherwise. |
+| Start distance / Requested run time | LONA only. The last start command, from the app or Home Assistant: metres along the guide wire (0 = automatic) and minutes. *Unknown* after a park. |
 | Battery | %. Unavailable while the gateway can't reach the mower. |
 | Status | e.g. *Parked by user*, *Leaving charging station*, *Mowing (manual)*, *Searching for charging station*. Raw code in attribute `code`. |
-| Problem | On only while there's an active error. |
+| Problem | On only while there's an active error, or while the mower is *Disabled, manual start needed* (the app's wording; it won't move until you start it). Attribute `error_codes` holds the mower's current error codes (`[0]` = none). |
 | Schedule paused | On while the mower is parked until further notice or until a date. |
 | Next start | *Unknown* when no automatic start is planned. Attribute `source`. |
 | Schedule | e.g. `Mon Tue Wed Thu Fri Sat 07:46, 8 h 9 min`. Entries in attributes. |
@@ -300,18 +305,25 @@ Shown by default:
 | Cutting time | Lifetime hours of the blade motor. |
 | Collisions | Lifetime counter. Wraps at 65 535. |
 | Park until next schedule / Park until further notice | Buttons |
-| Position | LONA only. A marker on the map, updated about every 3 seconds while the mower is out. |
+| Position | LONA only. A marker on the map, updated about every 3 seconds while the mower is out (see *Continuous position reporting*). |
+| Continuous position reporting | LONA only, on by default. The mower itself reports its position only while leaving the station and stops when it starts mowing. This switch keeps reporting on whenever the mower is away from the station. At the station it's left off: the position doesn't change there. |
 | Latitude / Longitude | LONA only. The same position as numbers (6 decimals). Keeps the last known value while parked. |
 
 Diagnostic (under the device's *Diagnostic* section):
 **Last contact** (when the mower last reported anything), last recorded error
 and its time (error name is **probable**, see below), radio link quality,
-mower online, refresh state.
+mower online, refresh state, and versions: software, mainboard, display (MMI),
+LONA firmware and LONA bootloader.
 
 Disabled by default (enable them on the device page if you want them):
 paused until (date of a timed pause; *Schedule paused* covers the common
 case), running time, charging cycles, guide wire length, raw settings (hex for
-decoding), report position for 1 hour (LONA, while parked).
+decoding), status message, internal connection state, UTC offset, position
+timer, position update interval (LONA). Most of these are raw values whose
+meaning GARDENA doesn't document.
+
+An error code that isn't in the table shows as *Unknown error code*; the
+number is in the `code` attribute of *Last recorded error*.
 
 **Services** (for automations):
 - `gardena_sileno_local.start_mowing_for`: `duration` in minutes, and either
@@ -331,7 +343,8 @@ data:
 
 **Diagnostics:** Settings → Devices & services → the integration → ⋮ →
 Download diagnostics gives the full raw state, with serial number and position
-removed. Attach it if you open an issue.
+removed. Binary fields are shown as base64 (`vo`) and as readable `hex`.
+Attach it if you open an issue.
 
 ---
 
@@ -352,16 +365,18 @@ matched the mower's zone 2 (45 m). So:
 - So you enter your app zones once under **Configure**: name + start distance.
   A zone without a distance falls back to the mower's start area with the same
   number (1–3), with the distance read live from the mower.
+- **Automatic** sends distance 0, which GARDENA's library calls the *default
+  starting point*: the mower picks where to start by itself. The app's
+  *According to starting points* sends exactly the same command (captured).
+  That the mower then chooses by the Lawn coverage shares is what the manual
+  describes; we haven't measured it.
 
-**Finding each zone's distance:** run [`tools/capture.py`](tools/capture.py),
-start the zone in the app, and read the first two bytes of
+**Finding each zone's distance:** start the zone in the app and read the
+*Start distance* sensor in Home Assistant. Or run
+[`tools/capture.py`](tools/capture.py) and read the first two bytes of
 `mower_timer_with_distance` (`00 2d` = 45 m). The steps are in
 [plan.md](plan.md#1-fill-in-the-four-app-zones-owner-10-minutes). Learning
 zones automatically is planned.
-- **Automatic** sends distance 0, which GARDENA's library calls the *default
-  starting point*: the mower picks where to start by itself. In a test it
-  drove out on its own for about 80 seconds before it began mowing. Exactly
-  how it chooses (for example by the zones' shares) isn't confirmed.
 
 ## What is verified and what isn't
 
@@ -374,17 +389,18 @@ zones automatically is planned.
 | Paused-until, last-error time, next start | ✅ Format from schema. Last-error time matched the gateway's own timestamp |
 | Schedule | 🟡 Decoded with the library's gen-1 schedule format. Check against the app |
 | Lawn coverage areas (`starting_points`) | 🟡 Inferred: 3 × 6 bytes matches the manual's "Lawn coverage, area 1-3" |
-| Error code names | 🟡 Probable: Husqvarna Automower numbering. GARDENA doesn't publish the list |
-| Status codes | ✅ 2, 4, 8 and 15 seen on the real mower and match. 🟡 The others follow the official library's list |
+| Error code names | 🟡 Probable: Husqvarna Automower numbering (codes 0–78). GARDENA doesn't publish the list. Only code 9 has been seen on the real mower |
+| Status codes | ✅ 0, 2, 3, 4, 6, 7, 8, 10, 14 and 15 seen on the real mower and match. 🟡 The others follow the official library's list |
 | Push updates | ✅ Real events observed and merged: status, timers, pause and position |
 | **Start** (mow for N minutes) | ✅ Tested: the mower left the station, status went *Leaving* → *Mowing (manual)* |
 | **Park until further notice** | ✅ Tested: the gateway confirmed, status went to *Searching for charging station* |
-| Live position (LONA) | ✅ Decoded from real events, about every 3 seconds while mowing |
+| Live position (LONA) | ✅ Decoded from real events, about every 3 seconds. On its own the mower reports only while leaving the station and stops when mowing begins |
+| Continuous position reporting (switch) and *Mowing ends* | 🟡 Built from live observations. Not run inside Home Assistant yet |
 | Start zone | ✅ The app's zone start was captured. The integration builds byte-identical commands from the mower's zone list |
 | Park until next schedule (default Dock mode) | 🟡 Payload from the official library. **Not tried on hardware yet** |
-| Position reporting while parked | 🟡 Payload from the official library, not tried |
-| Home Assistant runtime | 🟡 First beta. The code compiles and the gateway client was tested on its own, but it hasn't run inside Home Assistant yet |
-| `settings_report`, `settings_control`, `lona`, `lona_status`, `data_download` | ❌ Not decoded (see below) |
+| Home Assistant runtime | 🟡 Beta. Version 0.3.1 has run in the owner's Home Assistant since 2026-11-07 with no errors in the log. Newer changes are untested there |
+| LONA bootloader version | 🟡 Shown as the first three bytes (`00 02 01` = 0.2.1). The format is a guess |
+| `settings_report`, `settings_control`, `lona`, `lona_control`, `lona_status`, `data_download` | ❌ Not decoded (see below) |
 
 ---
 
@@ -482,14 +498,18 @@ These are still unknown. If you have a gen-1 SILENO, you can help.
 | `settings_report` | 18 bytes | First 9 bytes `ff`. Last 9, e.g. `01 2c 23 00 01 07 00 01 00`, match `settings_control` |
 | `settings_control` | 18 bytes | Last values written by the app |
 | `lona` | 10 bytes | No documentation |
-| `lona_status` | 12 bytes | Schema: error code, zone tag, map tag, session ID |
-| `data_download` | 30 bytes | Probably firmware/map transfer bookkeeping |
+| `lona_control` | 1 byte (`01`) | Schema: LONA control flags |
+| `lona_status` | 12 bytes | Schema: error code, zone tag, map tag, session ID. The last byte was `1f` during a run and `07` otherwise |
+| `data_download` | 30 bytes | Map/zone transfer bookkeeping. The gateway also shows it decoded as `data_download/0`: slot 260, a checksum, content tag and status |
+| `lemonbeat_status_message` | 4 values | Code 12, level 2 (= error in the schema), type 6, data `01`, unchanged for days while the mower worked normally |
 
 Candidates for the settings bytes, from the SILENO manual's settings menu:
 starting point (60–300 cm), drive past wire (20–40 cm), ECO mode,
 avoid house collisions, SensorControl on/off and Low/Mid/High, security level.
-`0x23` = 35 fits "drive past wire" and `0x012c` = 300 fits "starting point",
-but **neither is confirmed**.
+`0x23` = 35 fits "drive past wire" and `0x012c` = 300 fits "starting point".
+The sample mower in GARDENA's library has `00 3c 1e` at the same place, which
+is 60 and 30 and fits the same two settings. That's two mowers pointing the
+same way, but it's still **not confirmed**.
 
 **How to help:**
 1. `pip install websockets`

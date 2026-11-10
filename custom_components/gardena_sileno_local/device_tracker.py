@@ -25,7 +25,7 @@ async def async_setup_entry(
 
 
 class GardenaPosition(GardenaEntity, TrackerEntity):
-    """Only updates while position reporting runs (see the button)."""
+    """Only updates while position reporting runs (see switch.py)."""
 
     _attr_translation_key = "position"
 

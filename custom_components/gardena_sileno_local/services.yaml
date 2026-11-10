@@ -21,7 +21,6 @@ start_mowing_for:
           mode: box
     distance:
       required: false
-      default: 0
       selector:
         number:
           min: 0

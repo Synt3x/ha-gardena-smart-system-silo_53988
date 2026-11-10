@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -23,10 +24,21 @@ PLATFORMS = [
     Platform.LAWN_MOWER,
     Platform.SELECT,
     Platform.SENSOR,
+    Platform.SWITCH,
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
     Platform.DEVICE_TRACKER,
 ]
+
+# Entities removed in 0.4.0 (always 0 or constant, or replaced by the
+# Continuous position reporting switch). Their registry entries are deleted.
+REMOVED_ENTITY_KEYS = (
+    "manual_operation",
+    "supported_starting_points",
+    "supported_wires",
+    "start_delay",
+    "start_position_reporting",
+)
 
 MAX_RECONNECT_DELAY = 300
 # The gateway pushes every change. The periodic full read is only a safety net.
@@ -41,7 +53,7 @@ class GardenaCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=SAFETY_REFRESH
         )
         self.client = client
-        # device id -> selected start zone (0 = charging station)
+        # device id -> selected start zone (0 = automatic)
         self.start_zone: dict[str, int] = {}
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
@@ -80,6 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenaConfigEntry) -> b
         client.add_listener(lambda: coordinator.async_set_updated_data(client.devices))
     )
     entry.runtime_data = coordinator
+    _remove_old_entities(hass, entry)
     entry.async_create_background_task(
         hass, _keep_connected(coordinator), f"{DOMAIN}_connection"
     )
@@ -88,6 +101,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: GardenaConfigEntry) -> b
     # names), so the connection is kept.
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     return True
+
+
+def _remove_old_entities(hass: HomeAssistant, entry: GardenaConfigEntry) -> None:
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.unique_id.endswith(tuple(f"_{key}" for key in REMOVED_ENTITY_KEYS)):
+            registry.async_remove(entity.entity_id)
 
 
 async def _async_options_updated(hass: HomeAssistant, entry: GardenaConfigEntry) -> None:

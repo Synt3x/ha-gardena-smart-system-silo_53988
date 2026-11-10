@@ -112,7 +112,7 @@
           "status_unknown": "Unknown",
           "error": "Error",
           "error_power_up": "Error at power-up",
-          "waiting": "Waiting",
+          "waiting": "Disabled, manual start needed",
           "mowing_manual": "Mowing (manual)",
           "parked_auto_timer": "Parked (auto timer)",
           "parked_day_limit": "Parked (daily limit)",
@@ -170,7 +170,28 @@
           "difficult_finding_home": "Difficult finding home",
           "guide_calibration_done": "Guide calibration accomplished",
           "guide_calibration_failed": "Guide calibration failed",
-          "temporary_battery_problem": "Temporary battery problem"
+          "temporary_battery_problem": "Temporary battery problem",
+          "limited_cutting_height_range": "Limited cutting height range",
+          "unexpected_cutting_height_adjustment": "Unexpected cutting height adjustment",
+          "cutting_height_problem_drive": "Cutting height problem, drive",
+          "cutting_height_problem_current": "Cutting height problem, current",
+          "cutting_height_problem_direction": "Cutting height problem, direction",
+          "cutting_height_blocked": "Cutting height blocked",
+          "cutting_height_problem": "Cutting height problem",
+          "ultrasonic_problem": "Ultrasonic problem",
+          "battery_restriction_temperature": "Battery restricted by ambient temperature",
+          "battery_problem": "Battery problem",
+          "alarm_mower_switched_off": "Alarm: mower switched off",
+          "alarm_mower_stopped": "Alarm: mower stopped",
+          "alarm_mower_lifted": "Alarm: mower lifted",
+          "alarm_mower_tilted": "Alarm: mower tilted",
+          "alarm_mower_in_motion": "Alarm: mower in motion",
+          "alarm_outside_geofence": "Alarm: outside geofence",
+          "connection_changed": "Connection changed",
+          "connection_not_changed": "Connection not changed",
+          "com_board_not_available": "Communication board not available",
+          "slipped": "Slipped",
+          "unknown_code": "Unknown error code"
         }
       },
       "last_error_time": {
@@ -183,6 +204,9 @@
             "name": "Source"
           }
         }
+      },
+      "mowing_ends": {
+        "name": "Mowing ends"
       },
       "paused_until": {
         "name": "Paused until"
@@ -222,6 +246,42 @@
       },
       "settings_raw": {
         "name": "Raw settings"
+      },
+      "start_distance": {
+        "name": "Start distance"
+      },
+      "requested_run_time": {
+        "name": "Requested run time"
+      },
+      "software_version": {
+        "name": "Software version"
+      },
+      "mainboard_version": {
+        "name": "Mainboard version"
+      },
+      "mmi_version": {
+        "name": "Display (MMI) version"
+      },
+      "lona_version": {
+        "name": "LONA firmware version"
+      },
+      "lona_boot_version": {
+        "name": "LONA bootloader version"
+      },
+      "status_message": {
+        "name": "Status message"
+      },
+      "internal_connection_state": {
+        "name": "Internal connection state"
+      },
+      "utc_offset": {
+        "name": "UTC offset"
+      },
+      "position_timer": {
+        "name": "Position timer"
+      },
+      "position_update_interval": {
+        "name": "Position update interval"
       }
     },
     "binary_sensor": {
@@ -229,7 +289,12 @@
         "name": "Mower online"
       },
       "problem": {
-        "name": "Problem"
+        "name": "Problem",
+        "state_attributes": {
+          "error_codes": {
+            "name": "Error codes"
+          }
+        }
       },
       "schedule_paused": {
         "name": "Schedule paused"
@@ -241,9 +306,6 @@
       },
       "park_until_further_notice": {
         "name": "Park until further notice"
-      },
-      "start_position_reporting": {
-        "name": "Report position for 1 hour"
       },
       "refresh": {
         "name": "Refresh state"
@@ -257,6 +319,11 @@
     "select": {
       "start_zone": {
         "name": "Start zone"
+      }
+    },
+    "switch": {
+      "continuous_position": {
+        "name": "Continuous position reporting"
       }
     }
   }

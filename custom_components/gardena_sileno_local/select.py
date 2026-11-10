@@ -17,6 +17,7 @@ LABELS = {
     "sv": ("Automatiskt", "Zon {n}"),
     "en": ("Automatic", "Zone {n}"),
 }
+NOT_SET = {"sv": "ej inställd", "en": "not set"}
 
 
 async def async_setup_entry(
@@ -55,7 +56,10 @@ class StartZoneSelect(GardenaEntity, SelectEntity, RestoreEntity):
         automatic, generic = LABELS.get(self.hass.config.language[:2], LABELS["en"])
         if zone is None:
             return automatic
-        return f"{zone.name or generic.format(n=number)} ({zone.distance_m} m)"
+        name = zone.name or generic.format(n=number)
+        if zone.distance_m is None:
+            return f"{name} ({NOT_SET.get(self.hass.config.language[:2], NOT_SET['en'])})"
+        return f"{name} ({zone.distance_m} m)"
 
     @property
     def _selected(self) -> int:

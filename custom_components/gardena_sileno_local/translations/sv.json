@@ -112,7 +112,7 @@
           "status_unknown": "Okänd",
           "error": "Fel",
           "error_power_up": "Fel vid uppstart",
-          "waiting": "Väntar",
+          "waiting": "Avaktiverad, manuell start krävs",
           "mowing_manual": "Klipper (manuellt)",
           "parked_auto_timer": "Parkerad (autotimer)",
           "parked_day_limit": "Parkerad (dagsgräns)",
@@ -170,7 +170,28 @@
           "difficult_finding_home": "Svårt att hitta hem",
           "guide_calibration_done": "Guidekalibrering klar",
           "guide_calibration_failed": "Guidekalibrering misslyckades",
-          "temporary_battery_problem": "Tillfälligt batteriproblem"
+          "temporary_battery_problem": "Tillfälligt batteriproblem",
+          "limited_cutting_height_range": "Begränsat klipphöjdsområde",
+          "unexpected_cutting_height_adjustment": "Oväntad klipphöjdsjustering",
+          "cutting_height_problem_drive": "Klipphöjdsproblem, drivning",
+          "cutting_height_problem_current": "Klipphöjdsproblem, ström",
+          "cutting_height_problem_direction": "Klipphöjdsproblem, riktning",
+          "cutting_height_blocked": "Klipphöjd blockerad",
+          "cutting_height_problem": "Klipphöjdsproblem",
+          "ultrasonic_problem": "Ultraljudsproblem",
+          "battery_restriction_temperature": "Batteriet begränsat av omgivningstemperaturen",
+          "battery_problem": "Batteriproblem",
+          "alarm_mower_switched_off": "Larm: klipparen avstängd",
+          "alarm_mower_stopped": "Larm: klipparen stoppad",
+          "alarm_mower_lifted": "Larm: klipparen lyft",
+          "alarm_mower_tilted": "Larm: klipparen lutar",
+          "alarm_mower_in_motion": "Larm: klipparen i rörelse",
+          "alarm_outside_geofence": "Larm: utanför geofence",
+          "connection_changed": "Anslutningen ändrad",
+          "connection_not_changed": "Anslutningen inte ändrad",
+          "com_board_not_available": "Kommunikationskortet är inte tillgängligt",
+          "slipped": "Slirat",
+          "unknown_code": "Okänd felkod"
         }
       },
       "last_error_time": {
@@ -183,6 +204,9 @@
             "name": "Källa"
           }
         }
+      },
+      "mowing_ends": {
+        "name": "Klippning slutar"
       },
       "paused_until": {
         "name": "Pausad till"
@@ -222,6 +246,42 @@
       },
       "settings_raw": {
         "name": "Rådata inställningar"
+      },
+      "start_distance": {
+        "name": "Startavstånd"
+      },
+      "requested_run_time": {
+        "name": "Begärd körtid"
+      },
+      "software_version": {
+        "name": "Programvaruversion"
+      },
+      "mainboard_version": {
+        "name": "Moderkortsversion"
+      },
+      "mmi_version": {
+        "name": "Displayversion (MMI)"
+      },
+      "lona_version": {
+        "name": "LONA-firmwareversion"
+      },
+      "lona_boot_version": {
+        "name": "LONA-bootloaderversion"
+      },
+      "status_message": {
+        "name": "Statusmeddelande"
+      },
+      "internal_connection_state": {
+        "name": "Intern anslutningsstatus"
+      },
+      "utc_offset": {
+        "name": "UTC-förskjutning"
+      },
+      "position_timer": {
+        "name": "Positionstimer"
+      },
+      "position_update_interval": {
+        "name": "Intervall för positionsuppdatering"
       }
     },
     "binary_sensor": {
@@ -229,7 +289,12 @@
         "name": "Klippare online"
       },
       "problem": {
-        "name": "Problem"
+        "name": "Problem",
+        "state_attributes": {
+          "error_codes": {
+            "name": "Felkoder"
+          }
+        }
       },
       "schedule_paused": {
         "name": "Schema pausat"
@@ -241,9 +306,6 @@
       },
       "park_until_further_notice": {
         "name": "Parkera tills vidare"
-      },
-      "start_position_reporting": {
-        "name": "Rapportera position i 1 timme"
       },
       "refresh": {
         "name": "Läs om status"
@@ -257,6 +319,11 @@
     "select": {
       "start_zone": {
         "name": "Startzon"
+      }
+    },
+    "switch": {
+      "continuous_position": {
+        "name": "Kontinuerlig positionsrapportering"
       }
     }
   }

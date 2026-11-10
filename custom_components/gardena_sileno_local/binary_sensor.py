@@ -33,6 +33,12 @@ def _problem(data: Data) -> bool | None:
     return False if status else None
 
 
+def _problem_attrs(data: Data) -> dict[str, Any] | None:
+    """The mower's current error codes (device/0/error_code). [0] = none."""
+    codes = get_value(data, "device/0/error_code")
+    return {"error_codes": codes} if isinstance(codes, list) else None
+
+
 def _schedule_paused(data: Data) -> bool | None:
     raw = get_value(data, f"{LEMONBEAT}/action_paused_until_1")
     if raw is None:
@@ -43,6 +49,7 @@ def _schedule_paused(data: Data) -> bool | None:
 @dataclass(frozen=True, kw_only=True)
 class GardenaBinaryDescription(BinarySensorEntityDescription):
     value_fn: Callable[[Data], bool | None]
+    attrs_fn: Callable[[Data], dict[str, Any] | None] = lambda data: None
     requires_online: bool = False
 
 
@@ -53,6 +60,7 @@ BINARY_SENSORS: tuple[GardenaBinaryDescription, ...] = (
         device_class=BinarySensorDeviceClass.PROBLEM,
         requires_online=True,
         value_fn=_problem,
+        attrs_fn=_problem_attrs,
     ),
     GardenaBinaryDescription(
         key="schedule_paused",
@@ -92,3 +100,7 @@ class GardenaBinarySensor(GardenaEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         return self.entity_description.value_fn(self.device_data)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        return self.entity_description.attrs_fn(self.device_data)

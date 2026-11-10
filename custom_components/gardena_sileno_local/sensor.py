@@ -24,16 +24,21 @@ from .decode import (
     GEN1_STATUS,
     LEMONBEAT,
     NEXT_START_SOURCE,
+    UNKNOWN_ERROR,
     decode_lawn_coverage,
     decode_paused_until,
     decode_position,
     decode_schedule,
+    decode_start_command,
+    decode_version_bytes,
+    error_key,
     get_value,
     has_lona,
     hexdump,
     is_gen1_mower,
     last_contact_ts,
     local_naive_from_epoch,
+    timed_run_end_ts,
 )
 from .entity import GardenaEntity
 
@@ -49,16 +54,30 @@ def _local(naive: datetime | None) -> datetime | None:
     return naive.replace(tzinfo=dt_util.get_default_time_zone()) if naive else None
 
 
+def _start(data: Data, name: str) -> int | None:
+    """A field of the last start command. None after a park (all zeros)."""
+    command = decode_start_command(_lb(data, "mower_timer_with_distance"))
+    if command is None or command.seconds == 0:
+        return None
+    return getattr(command, name)
+
+
+def _mowing_ends(data: Data) -> datetime | None:
+    """When the current timed run ends. Shown as "in 42 minutes" in the UI."""
+    end = timed_run_end_ts(data)
+    if end is None:
+        return None
+    when = dt_util.utc_from_timestamp(end)
+    return when if when > dt_util.utcnow() else None
+
+
 def _status(data: Data) -> str | None:
     status = GEN1_STATUS.get(_lb(data, "status"))
     return status[0] if status else None
 
 
 def _last_error(data: Data) -> str | None:
-    code = _lb(data, "last_error_code")
-    if code is None:
-        return None
-    return ERROR_CODES.get(code)
+    return error_key(_lb(data, "last_error_code"))
 
 
 def _paused_until(data: Data) -> datetime | None:
@@ -154,7 +173,7 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         translation_key="last_error",
         entity_category=EntityCategory.DIAGNOSTIC,
         device_class=SensorDeviceClass.ENUM,
-        options=sorted(set(ERROR_CODES.values())),
+        options=sorted({*ERROR_CODES.values(), UNKNOWN_ERROR}),
         value_fn=_last_error,
         attrs_fn=lambda d: {
             "code": _lb(d, "last_error_code"),
@@ -176,6 +195,12 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         attrs_fn=lambda d: {
             "source": NEXT_START_SOURCE.get(_lb(d, "source_for_next_start"), "unknown")
         },
+    ),
+    GardenaSensorDescription(
+        key="mowing_ends",
+        translation_key="mowing_ends",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=_mowing_ends,
     ),
     GardenaSensorDescription(
         key="paused_until",
@@ -270,6 +295,89 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.METERS,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: _lb(d, "guide_wire_length") or None,
+    ),
+    # Last start command (from the app or Home Assistant).
+    GardenaSensorDescription(
+        key="start_distance",
+        translation_key="start_distance",
+        device_class=SensorDeviceClass.DISTANCE,
+        native_unit_of_measurement=UnitOfLength.METERS,
+        lona_only=True,
+        value_fn=lambda d: _start(d, "distance_m"),
+    ),
+    GardenaSensorDescription(
+        key="requested_run_time",
+        translation_key="requested_run_time",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        lona_only=True,
+        value_fn=lambda d: (s // 60 if (s := _start(d, "seconds")) is not None else None),
+    ),
+    # Versions.
+    *(
+        GardenaSensorDescription(
+            key=key,
+            translation_key=key,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            lona_only=lona_only,
+            value_fn=fn,
+        )
+        for key, lona_only, fn in (
+            ("software_version", False, lambda d: get_value(d, "device/0/software_version")),
+            ("mainboard_version", False, lambda d: _lb(d, "mainboard_version")),
+            ("mmi_version", False, lambda d: _lb(d, "mmi_version")),
+            (
+                "lona_version",
+                True,
+                lambda d: decode_version_bytes(_lb(d, "lona_mcu_fw_version")),
+            ),
+            (
+                "lona_boot_version",
+                True,
+                lambda d: decode_version_bytes(_lb(d, "lona_mcu_boot_fw_version")),
+            ),
+        )
+    ),
+    # Extra diagnostics, hidden by default.
+    GardenaSensorDescription(
+        key="status_message",
+        translation_key="status_message",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda d: get_value(d, "lemonbeat_status_message/0/code"),
+        attrs_fn=lambda d: {
+            name: get_value(d, f"lemonbeat_status_message/0/{name}")
+            for name in ("level", "type", "data")
+        },
+    ),
+    *(
+        GardenaSensorDescription(
+            key=key,
+            translation_key=key,
+            entity_category=EntityCategory.DIAGNOSTIC,
+            entity_registry_enabled_default=False,
+            device_class=SensorDeviceClass.DURATION if unit else None,
+            native_unit_of_measurement=unit,
+            lona_only=lona_only,
+            value_fn=fn,
+        )
+        for key, unit, lona_only, fn in (
+            (
+                "internal_connection_state",
+                None,
+                False,
+                lambda d: _lb(d, "internal_connection_state"),
+            ),
+            ("utc_offset", None, False, lambda d: get_value(d, "device/0/utc_offset")),
+            ("position_timer", UnitOfTime.SECONDS, False, lambda d: _lb(d, "position_timer")),
+            # How often the mower reports its position while the timer runs.
+            (
+                "position_update_interval",
+                UnitOfTime.MILLISECONDS,
+                True,
+                lambda d: _lb(d, "position_update_interval"),
+            ),
+        )
     ),
     GardenaSensorDescription(
         key="settings_raw",

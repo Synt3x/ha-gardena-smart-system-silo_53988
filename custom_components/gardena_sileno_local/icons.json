@@ -1,0 +1,144 @@
+{
+  "entity": {
+    "sensor": {
+      "status": {
+        "default": "mdi:robot-mower"
+      },
+      "last_error": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "last_error_time": {
+        "default": "mdi:clock-alert-outline"
+      },
+      "next_start": {
+        "default": "mdi:clock-start"
+      },
+      "mowing_ends": {
+        "default": "mdi:clock-end"
+      },
+      "paused_until": {
+        "default": "mdi:calendar-clock"
+      },
+      "schedule": {
+        "default": "mdi:calendar-week"
+      },
+      "lawn_coverage": {
+        "default": "mdi:map-marker-path"
+      },
+      "cutting_time": {
+        "default": "mdi:saw-blade"
+      },
+      "running_time": {
+        "default": "mdi:timer-outline"
+      },
+      "charging_cycles": {
+        "default": "mdi:battery-sync"
+      },
+      "collisions": {
+        "default": "mdi:car-brake-alert"
+      },
+      "rf_link_quality": {
+        "default": "mdi:signal"
+      },
+      "last_contact": {
+        "default": "mdi:access-point-check"
+      },
+      "latitude": {
+        "default": "mdi:latitude"
+      },
+      "longitude": {
+        "default": "mdi:longitude"
+      },
+      "guide_wire_length": {
+        "default": "mdi:ruler"
+      },
+      "settings_raw": {
+        "default": "mdi:hexadecimal"
+      },
+      "start_distance": {
+        "default": "mdi:map-marker-distance"
+      },
+      "requested_run_time": {
+        "default": "mdi:timer-play-outline"
+      },
+      "software_version": {
+        "default": "mdi:chip"
+      },
+      "mainboard_version": {
+        "default": "mdi:chip"
+      },
+      "mmi_version": {
+        "default": "mdi:chip"
+      },
+      "lona_version": {
+        "default": "mdi:chip"
+      },
+      "lona_boot_version": {
+        "default": "mdi:chip"
+      },
+      "status_message": {
+        "default": "mdi:message-alert-outline"
+      },
+      "internal_connection_state": {
+        "default": "mdi:lan-connect"
+      },
+      "utc_offset": {
+        "default": "mdi:map-clock-outline"
+      },
+      "position_timer": {
+        "default": "mdi:timer-marker-outline"
+      },
+      "position_update_interval": {
+        "default": "mdi:update"
+      }
+    },
+    "binary_sensor": {
+      "schedule_paused": {
+        "default": "mdi:calendar-check",
+        "state": {
+          "on": "mdi:calendar-remove"
+        }
+      }
+    },
+    "button": {
+      "park_until_next_schedule": {
+        "default": "mdi:home-clock-outline"
+      },
+      "park_until_further_notice": {
+        "default": "mdi:home-lock-outline"
+      },
+      "refresh": {
+        "default": "mdi:refresh"
+      }
+    },
+    "device_tracker": {
+      "position": {
+        "default": "mdi:robot-mower-outline"
+      }
+    },
+    "select": {
+      "start_zone": {
+        "default": "mdi:map-marker-radius-outline"
+      }
+    },
+    "switch": {
+      "continuous_position": {
+        "default": "mdi:crosshairs-gps",
+        "state": {
+          "off": "mdi:crosshairs-off"
+        }
+      }
+    }
+  },
+  "services": {
+    "start_mowing_for": {
+      "service": "mdi:play-circle-outline"
+    },
+    "park_until_next_schedule": {
+      "service": "mdi:home-clock-outline"
+    },
+    "park_until_further_notice": {
+      "service": "mdi:home-lock-outline"
+    }
+  }
+}
