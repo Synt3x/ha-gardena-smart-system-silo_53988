@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import GardenaCoordinator
-from .api import GardenaLocalError
+from .api import CannotConnect, GardenaLocalError
 from .const import DOMAIN, MODEL_NAMES
 from .decode import (
     LEMONBEAT,
@@ -17,6 +17,7 @@ from .decode import (
     encode_start_mowing,
     get_value,
     has_lona,
+    is_gen1_mower,
     opaque_payload,
 )
 
@@ -36,13 +37,21 @@ class GardenaEntity(CoordinatorEntity[GardenaCoordinator]):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, device_id)},
             manufacturer="GARDENA",
-            name="GARDENA SILENO",
+            name=self._device_name(),
             model=MODEL_NAMES.get(str(model_number), f"Mower {model_number}"),
             model_id=str(model_number) if model_number else None,
             serial_number=get_value(data, "device/0/serial_number"),
             sw_version=get_value(data, "device/0/firmware_version"),
             hw_version=get_value(data, "device/0/hardware_version"),
         )
+
+    def _device_name(self) -> str:
+        """Tell mowers on the same gateway apart by the end of the serial number."""
+        mowers = sum(is_gen1_mower(dev["data"]) for dev in self.coordinator.data.values())
+        serial = get_value(self.device_data, "device/0/serial_number")
+        if mowers < 2 or not serial:
+            return "GARDENA SILENO"
+        return f"GARDENA SILENO {str(serial)[-4:]}"
 
     @property
     def device_data(self) -> dict[str, Any]:
@@ -57,18 +66,42 @@ class GardenaEntity(CoordinatorEntity[GardenaCoordinator]):
         return get_value(self.device_data, "connection_status/0/online") is not False
 
     @property
+    def winter_storage(self) -> bool:
+        """Winter mode is on and the mower is offline, as expected.
+
+        While the mower is online, winter mode changes nothing.
+        """
+        return self.device_id in self.coordinator.winter and not self.mower_online
+
+    @property
     def available(self) -> bool:
-        if not (super().available and self.device_id in (self.coordinator.data or {})):
+        if self.device_id not in (self.coordinator.data or {}):
+            return False
+        if self.winter_storage:
+            return True
+        if not super().available:
             return False
         return self.mower_online or not self._requires_mower_online
 
     async def write_lemonbeat(self, resource: str, payload: dict[str, Any]) -> None:
+        if self.winter_storage:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="winter_offline"
+            )
         try:
             await self.coordinator.client.write(
                 self.device_id, f"{LEMONBEAT}/{resource}", payload
             )
+        except CannotConnect as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="gateway_unreachable"
+            ) from err
         except GardenaLocalError as err:
-            raise HomeAssistantError(f"The gateway rejected the command: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_rejected",
+                translation_placeholders={"error": str(err)},
+            ) from err
 
     # Mower commands. Payloads follow GARDENA's official library.
 

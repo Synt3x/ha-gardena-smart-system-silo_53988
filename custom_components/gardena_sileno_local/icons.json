@@ -122,6 +122,12 @@
       }
     },
     "switch": {
+      "winter_mode": {
+        "default": "mdi:snowflake",
+        "state": {
+          "off": "mdi:snowflake-off"
+        }
+      },
       "continuous_position": {
         "default": "mdi:crosshairs-gps",
         "state": {

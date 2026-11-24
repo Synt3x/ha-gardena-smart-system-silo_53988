@@ -123,6 +123,9 @@ def _position_value(data: Data, field: str) -> float | None:
     return getattr(position, field) if position else None
 
 
+# Default for winter_value: show the last known value.
+_LAST_KNOWN = object()
+
 RAW_FIELDS = (
     "settings_report",
     "settings_control",
@@ -148,6 +151,8 @@ class GardenaSensorDescription(SensorEntityDescription):
     lona_only: bool = False
     # Keep showing the last value when the mower stops reporting (position).
     keep_last: bool = False
+    # Shown instead of a stale value while the mower is in winter storage.
+    winter_value: Any = _LAST_KNOWN
 
 
 SENSORS: tuple[GardenaSensorDescription, ...] = (
@@ -157,14 +162,16 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         requires_online=True,
+        winter_value=None,
         value_fn=lambda d: _lb(d, "battery_level"),
     ),
     GardenaSensorDescription(
         key="status",
         translation_key="status",
         device_class=SensorDeviceClass.ENUM,
-        options=sorted({s for s, _ in GEN1_STATUS.values()}),
+        options=sorted({*(s for s, _ in GEN1_STATUS.values()), "winter_storage"}),
         requires_online=True,
+        winter_value="winter_storage",
         value_fn=_status,
         attrs_fn=lambda d: {"code": _lb(d, "status")},
     ),
@@ -191,6 +198,7 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         key="next_start",
         translation_key="next_start",
         device_class=SensorDeviceClass.TIMESTAMP,
+        winter_value=None,
         value_fn=lambda d: _local(local_naive_from_epoch(_lb(d, "timestamp_next_start"))),
         attrs_fn=lambda d: {
             "source": NEXT_START_SOURCE.get(_lb(d, "source_for_next_start"), "unknown")
@@ -200,6 +208,7 @@ SENSORS: tuple[GardenaSensorDescription, ...] = (
         key="mowing_ends",
         translation_key="mowing_ends",
         device_class=SensorDeviceClass.TIMESTAMP,
+        winter_value=None,
         value_fn=_mowing_ends,
     ),
     GardenaSensorDescription(
@@ -415,7 +424,13 @@ class GardenaSensor(GardenaEntity, SensorEntity):
         self._last_value: Any = None
 
     @property
+    def _winter_override(self) -> bool:
+        return self.entity_description.winter_value is not _LAST_KNOWN and self.winter_storage
+
+    @property
     def native_value(self) -> Any:
+        if self._winter_override:
+            return self.entity_description.winter_value
         value = self.entity_description.value_fn(self.device_data)
         if self.entity_description.keep_last:
             if value is None:
@@ -425,4 +440,6 @@ class GardenaSensor(GardenaEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self._winter_override:
+            return None
         return self.entity_description.attrs_fn(self.device_data)

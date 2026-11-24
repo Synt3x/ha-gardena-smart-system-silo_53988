@@ -2,21 +2,35 @@
   "config": {
     "step": {
       "user": {
-        "title": "GARDENA smart Gateway (local)",
-        "description": "Enable WebSocket support on the gateway first (see the README). The password is the first 8 characters of the ID on the gateway's label.",
+        "title": "Connect to the GARDENA smart Gateway",
+        "description": "You find the password on the label under the gateway. Is the local API still off? Then the next step offers to turn it on.",
         "data": {
-          "host": "Gateway IP address or hostname",
-          "password": "Password (first 8 characters of the gateway ID)",
+          "host": "Gateway IP address",
+          "password": "Password",
           "port": "Port"
+        },
+        "data_description": {
+          "host": "Look in your router's list of connected devices, e.g. 192.168.1.50. Give the gateway a fixed address there.",
+          "password": "The first 8 characters of the ID on the gateway's label (0-9 and a-f). You can also enter the whole ID. It is not the 8-digit HomeKit code.",
+          "port": "Leave at 8443."
         }
       },
       "reconfigure": {
         "title": "Change gateway address or password",
         "data": {
-          "host": "Gateway IP address or hostname",
-          "password": "Password (first 8 characters of the gateway ID)",
+          "host": "Gateway IP address",
+          "password": "Password",
           "port": "Port"
+        },
+        "data_description": {
+          "host": "Look in your router's list of connected devices, e.g. 192.168.1.50. Give the gateway a fixed address there.",
+          "password": "The first 8 characters of the ID on the gateway's label (0-9 and a-f). You can also enter the whole ID. It is not the 8-digit HomeKit code.",
+          "port": "Leave at 8443."
         }
+      },
+      "enable_api": {
+        "title": "Turn on the local API?",
+        "description": "A gateway answers at {host}, but its local API (WebSocket support) doesn't. It is off by default.\n\nSelect **Submit** to log in to the gateway with your password and turn it on. Nothing else is changed. It stays on after restarts, and the README explains how to turn it off.\n\nGARDENA places this setting under *Advanced* and warns there that such settings may affect the warranty."
       },
       "reauth_confirm": {
         "title": "Gateway password rejected",
@@ -27,10 +41,12 @@
       }
     },
     "error": {
-      "invalid_auth": "Wrong password. Check the first 8 characters of the ID on the gateway's label.",
+      "invalid_auth": "Wrong password. Check the first 8 characters of the ID on the gateway's label. 1 and f are easy to mix up.",
+      "cannot_connect": "Nothing answers at that address. Check the IP address, that the gateway has power, and that Home Assistant is on the same network.",
+      "no_mower": "Connected, but the gateway reports no 1st-generation SILENO mower. If the mower is new or the gateway just started, wait a few minutes and try again.",
       "different_mower": "That gateway reports a different mower than this integration was set up for.",
-      "cannot_connect": "Cannot reach the local API. Check the IP address and that WebSocket support is enabled on the gateway.",
-      "no_mower": "Connected, but found no 1st-generation SILENO mower."
+      "enable_failed": "The gateway didn't accept the change. Try again, or turn on WebSocket support by hand (see the README).",
+      "api_not_started": "The setting was accepted, but the local API doesn't answer yet. Wait a minute and try again."
     },
     "abort": {
       "already_configured": "This mower is already set up. The address and password were updated.",
@@ -41,18 +57,27 @@
   "options": {
     "step": {
       "init": {
-        "description": "Zones: the GARDENA app's zones (max 4) are not stored on the mower. Enter each zone's name and its start distance along the guide wire. A zone without a distance uses the mower's own start area with the same number (1-3). Automatic is always available.",
+        "title": "Mowing and zones",
+        "description": "A zone is a start point along the guide wire. Names and distances are only needed if you want to start in a certain zone. Find a distance by starting the zone in the GARDENA app and reading the Start distance sensor.",
         "data": {
-          "zone_1_name": "Zone 1 name",
-          "zone_1_distance": "Zone 1 start distance (m)",
-          "zone_2_name": "Zone 2 name",
-          "zone_2_distance": "Zone 2 start distance (m)",
-          "zone_3_name": "Zone 3 name",
-          "zone_3_distance": "Zone 3 start distance (m)",
-          "zone_4_name": "Zone 4 name",
-          "zone_4_distance": "Zone 4 start distance (m)",
           "dock_mode": "What the Dock button does",
-          "start_minutes": "Mowing time for the Start button (minutes)"
+          "start_minutes": "Mowing time for the Start button",
+          "zone_1_name": "Zone 1 name",
+          "zone_1_distance": "Zone 1 start distance",
+          "zone_2_name": "Zone 2 name",
+          "zone_2_distance": "Zone 2 start distance",
+          "zone_3_name": "Zone 3 name",
+          "zone_3_distance": "Zone 3 start distance",
+          "zone_4_name": "Zone 4 name",
+          "zone_4_distance": "Zone 4 start distance"
+        },
+        "data_description": {
+          "dock_mode": "Both choices also exist as separate buttons.",
+          "start_minutes": "Goes before the schedule for this long.",
+          "zone_1_distance": "Empty: the mower's own start area 1, if it has one.",
+          "zone_2_distance": "Empty: the mower's own start area 2, if it has one.",
+          "zone_3_distance": "Empty: the mower's own start area 3, if it has one.",
+          "zone_4_distance": "Empty: the zone can't be started. The mower has only three start areas of its own."
         }
       }
     }
@@ -116,7 +141,8 @@
           "mowing_manual": "Mowing (manual)",
           "parked_auto_timer": "Parked (auto timer)",
           "parked_day_limit": "Parked (daily limit)",
-          "parked_frost": "Parked (frost)"
+          "parked_frost": "Parked (frost)",
+          "winter_storage": "Winter storage"
         }
       },
       "last_error": {
@@ -322,9 +348,38 @@
       }
     },
     "switch": {
+      "winter_mode": {
+        "name": "Winter mode"
+      },
       "continuous_position": {
         "name": "Continuous position reporting"
       }
+    }
+  },
+  "exceptions": {
+    "wrong_password": {
+      "message": "The gateway rejected the password."
+    },
+    "setup_failed": {
+      "message": "The gateway's local API can't be reached ({error}). Check that the gateway has power and that its local API is on. Home Assistant keeps trying."
+    },
+    "no_mower_yet": {
+      "message": "The gateway doesn't report the mower yet. Home Assistant keeps trying."
+    },
+    "update_failed": {
+      "message": "Could not read the mower's state: {error}"
+    },
+    "gateway_unreachable": {
+      "message": "The gateway can't be reached, so the command was not sent. Check that it has power and is connected to the network."
+    },
+    "command_rejected": {
+      "message": "The gateway didn't accept the command ({error}). If the mower is switched off, stopped or has an error, fix that at the mower first."
+    },
+    "winter_offline": {
+      "message": "Winter mode is on and the mower is offline. Switch on the mower and the gateway first."
+    },
+    "zone_not_set": {
+      "message": "Start zone {zone} has no distance yet. Set it under Configure on the integration, or choose Automatic."
     }
   }
 }

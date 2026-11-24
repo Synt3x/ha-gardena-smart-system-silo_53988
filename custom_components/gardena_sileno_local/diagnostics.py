@@ -38,8 +38,12 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     coordinator = entry.runtime_data
     devices = {
-        f"device_{index}": {"service": device["service"], "data": device["data"]}
-        for index, device in enumerate((coordinator.data or {}).values())
+        f"device_{index}": {
+            "service": device["service"],
+            "winter_mode": device_id in coordinator.winter,
+            "data": device["data"],
+        }
+        for index, (device_id, device) in enumerate((coordinator.data or {}).items())
     }
     return {
         "entry": async_redact_data(dict(entry.data), TO_REDACT),

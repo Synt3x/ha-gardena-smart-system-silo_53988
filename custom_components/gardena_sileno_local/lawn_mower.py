@@ -21,6 +21,7 @@ from .const import (
     DEFAULT_DOCK_MODE,
     DEFAULT_START_MINUTES,
     DOCK_FURTHER_NOTICE,
+    DOMAIN,
 )
 from .decode import (
     MAX_ZONES,
@@ -82,6 +83,8 @@ class GardenaMower(GardenaEntity, LawnMowerEntity):
 
     @property
     def activity(self) -> LawnMowerActivity | None:
+        if self.winter_storage:
+            return LawnMowerActivity.DOCKED
         activity = mower_activity(self.device_data)
         return ACTIVITY.get(activity) if activity else None
 
@@ -106,8 +109,9 @@ class GardenaMower(GardenaEntity, LawnMowerEntity):
         )
         if distance is None:
             raise ServiceValidationError(
-                f"Start zone {zone} has no distance yet. Set it under the integration's "
-                "Configure, or choose Automatic."
+                translation_domain=DOMAIN,
+                translation_key="zone_not_set",
+                translation_placeholders={"zone": str(zone)},
             )
         return distance
 

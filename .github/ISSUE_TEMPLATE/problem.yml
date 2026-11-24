@@ -1,0 +1,40 @@
+name: Something doesn't work
+description: Report a problem with the integration
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Never post your gateway password or gateway ID. The diagnostics file has
+        password, address, serial number and position removed. Zone names you
+        typed yourself are included.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Mower model
+      description: Shown on the device page in Home Assistant
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Integration, Home Assistant and gateway firmware
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Settings > Devices & services > the integration > ⋮ > Download diagnostics. Drag the file here.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log lines
+      render: text

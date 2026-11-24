@@ -1,0 +1,28 @@
+name: It works (or not) on my mower
+description: Help fill in the list of tested mowers
+labels: [tested]
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Mower model and gateway firmware
+    validations:
+      required: true
+  - type: checkboxes
+    id: worked
+    attributes:
+      label: What have you seen work?
+      description: Stay near the mower when you test commands.
+      options:
+        - label: Setup, including turning on the local API in the wizard
+        - label: Status and battery
+        - label: Start
+        - label: Dock / Park until next schedule
+        - label: Park until further notice
+        - label: Start in a zone
+        - label: Position and continuous position reporting
+        - label: Winter mode
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes

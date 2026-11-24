@@ -13,6 +13,7 @@ Sources:
 from __future__ import annotations
 
 import base64
+import copy
 import struct
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -499,6 +500,14 @@ def last_contact_ts(data: dict[str, Any]) -> int | None:
                 if isinstance(ts, int) and (newest is None or ts > newest):
                     newest = ts
     return newest
+
+
+def offline_copy(device: dict[str, Any]) -> dict[str, Any]:
+    """A copy of a device ({"service", "data"}) that reports the mower as offline."""
+    result = copy.deepcopy(device)
+    status = result["data"].setdefault("connection_status", {}).setdefault("0", {})
+    status["online"] = {**(status.get("online") or {}), "vb": False}
+    return result
 
 
 def is_gen1_mower(data: dict[str, Any]) -> bool:

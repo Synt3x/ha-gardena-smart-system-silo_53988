@@ -2,6 +2,35 @@
 
 Newest first.
 
+## 2026-11-24 – Plans live in GitHub issues, not in plan.md
+- **Area:** docs
+- **Decision (owner):** Features, tests and known issues are GitHub issues. `plan.md` is removed; everything in it became issues #1–#18. Older entries below that mention plan.md refer to those. Issue #18 tracks what's left before the beta label is dropped.
+- **Why:** One place for plans and problems, where others can see and comment.
+
+## 2026-11-24 – 0.5.0 made ready as a public beta
+- **Area:** setup / GUI / docs / operations
+- **Decision (owner):**
+  - The setup wizard may turn on the gateway's local API, only after a confirmation step that says what changes and mentions the warranty warning.
+  - Dock keeps *until next schedule* as default, with a clear warning that it's untested on hardware.
+  - The gateway's certificate is not pinned yet. The risk is in the README, and the open question is in issue #15.
+  - Released as a public beta, not as stable.
+- **Decided by Claude:** README rewritten for non-technical users, technical parts moved to `docs/`. Automated tests and GitHub Actions. Setup retries if the gateway doesn't report the mower yet. Device names differ with two mowers. Translated error messages.
+- **Waived:** no separate reviewer; Claude reviewed its own work.
+- **Objection:** Claude advised against a stable release, since Dock, continuous position and winter mode haven't run on a real mower.
+- **Level:** TEST (beta), public repo
+
+## 2026-11-24 – Winter mode (0.5.0)
+- **Area:** GUI / availability
+- **Decision:**
+  - A *Winter mode* switch per mower. While it's on **and** the mower is offline, nothing is unavailable: status *Winter storage*, mower *Docked*, *Problem* off, and battery, next start and mowing ends unknown.
+  - It also covers an unplugged gateway, including Home Assistant restarts. The mower's last state is saved in Home Assistant's storage when the switch is turned on, and deleted with the integration.
+  - It changes nothing while the mower is online.
+  - It turns itself off when the mower drives out.
+  - *Mower online* keeps showing the truth.
+- **Why:** The owner wanted an offline mower to be okay in winter. The mower and often the gateway are off for months, and a forgotten switch must not hide a missing mower in summer.
+- **Chosen without asking:** a switch rather than a setting under Configure, so automations can use it. *Docked* for the mower card, because Home Assistant has no stored state.
+- **Level:** TEST
+
 ## 2026-11-10 – Audit against GARDENA's schema and live data
 - **Area:** data / GUI / docs
 - **Method:** Compared `decode.py` with GARDENA's schema for model 53988 and its library, and with live values read from the owner's Home Assistant (running 0.3.1): all entity states, 3 days of history, the diagnostics payload and the log.

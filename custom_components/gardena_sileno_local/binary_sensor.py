@@ -51,6 +51,8 @@ class GardenaBinaryDescription(BinarySensorEntityDescription):
     value_fn: Callable[[Data], bool | None]
     attrs_fn: Callable[[Data], dict[str, Any] | None] = lambda data: None
     requires_online: bool = False
+    # Off while the mower is in winter storage.
+    off_in_winter: bool = False
 
 
 BINARY_SENSORS: tuple[GardenaBinaryDescription, ...] = (
@@ -59,6 +61,7 @@ BINARY_SENSORS: tuple[GardenaBinaryDescription, ...] = (
         translation_key="problem",
         device_class=BinarySensorDeviceClass.PROBLEM,
         requires_online=True,
+        off_in_winter=True,
         value_fn=_problem,
         attrs_fn=_problem_attrs,
     ),
@@ -98,9 +101,17 @@ class GardenaBinarySensor(GardenaEntity, BinarySensorEntity):
         self._requires_mower_online = description.requires_online
 
     @property
+    def _winter_off(self) -> bool:
+        return self.entity_description.off_in_winter and self.winter_storage
+
+    @property
     def is_on(self) -> bool | None:
+        if self._winter_off:
+            return False
         return self.entity_description.value_fn(self.device_data)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
+        if self._winter_off:
+            return None
         return self.entity_description.attrs_fn(self.device_data)

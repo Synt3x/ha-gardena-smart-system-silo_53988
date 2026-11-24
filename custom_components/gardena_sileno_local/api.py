@@ -16,6 +16,7 @@ Protocol (from gardena-smart-local-api and live testing):
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import uuid
@@ -29,6 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 SERVICES = ("lemonbeatd", "lwm2mserver")
 DEFAULT_PORT = 8443
 REQUEST_TIMEOUT = 20
+WEB_TIMEOUT = 10
 CONNECT_TIMEOUT = 10
 
 
@@ -46,6 +48,44 @@ class InvalidAuth(GardenaLocalError):
 
 class CommandFailed(GardenaLocalError):
     """The gateway rejected a request."""
+
+
+async def gateway_web_answers(session: aiohttp.ClientSession, host: str) -> bool:
+    """True if a GARDENA gateway's web page answers (no login needed)."""
+    try:
+        async with asyncio.timeout(WEB_TIMEOUT):
+            async with session.get(f"https://{host}/version", ssl=False) as response:
+                return response.status == 200
+    except (aiohttp.ClientError, OSError, ValueError, TimeoutError):
+        return False
+
+
+async def enable_local_api(session: aiohttp.ClientSession, host: str, password: str) -> None:
+    """Turn on the WebSocket API, the way the gateway's own web page does it."""
+    try:
+        async with asyncio.timeout(WEB_TIMEOUT):
+            async with session.post(
+                f"https://{host}/login", json={"password": password}, ssl=False
+            ) as response:
+                if response.status in (401, 403):
+                    raise InvalidAuth("Wrong password")
+                response.raise_for_status()
+                token = (await response.json(content_type=None) or {}).get("session")
+            if not token:
+                raise CannotConnect("The gateway's login returned no session")
+            async with session.put(
+                f"https://{host}/websocket_api",
+                json={"enable": True},
+                headers={"X-Session": str(token)},
+                ssl=False,
+            ) as response:
+                response.raise_for_status()
+    except (aiohttp.ClientError, OSError, ValueError, AttributeError, TimeoutError) as err:
+        raise CannotConnect(str(err) or type(err).__name__) from err
+
+
+def basic_auth(password: str) -> str:
+    return "Basic " + base64.b64encode(f"_:{password}".encode()).decode("ascii")
 
 
 def _deep_merge(target: dict[str, Any], source: dict[str, Any]) -> None:
@@ -78,7 +118,7 @@ class GardenaLocalClient:
     ) -> None:
         self._session = session
         self._url = f"wss://{host}:{port}"
-        self._headers = {"Authorization": aiohttp.BasicAuth("_", password).encode()}
+        self._headers = {"Authorization": basic_auth(password)}
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._reader: asyncio.Task | None = None
         self._pending: dict[str, asyncio.Future] = {}

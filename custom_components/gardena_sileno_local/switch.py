@@ -32,11 +32,43 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: GardenaConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     coordinator = entry.runtime_data
-    async_add_entities(
-        ContinuousPosition(coordinator, device_id)
-        for device_id, device in coordinator.data.items()
-        if is_gen1_mower(device["data"]) and has_lona(device["data"])
-    )
+    entities: list[SwitchEntity] = []
+    for device_id, device in coordinator.data.items():
+        if not is_gen1_mower(device["data"]):
+            continue
+        entities.append(WinterMode(coordinator, device_id))
+        if has_lona(device["data"]):
+            entities.append(ContinuousPosition(coordinator, device_id))
+    async_add_entities(entities)
+
+
+class WinterMode(GardenaEntity, SwitchEntity):
+    """The mower is put away: being offline is expected, not a fault.
+
+    Kept by the coordinator, which saves it and turns it off when the mower
+    drives out again.
+    """
+
+    _attr_translation_key = "winter_mode"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator, device_id: str) -> None:
+        super().__init__(coordinator, device_id, "winter_mode")
+
+    @property
+    def available(self) -> bool:
+        """Can be turned on after the mower or gateway was unplugged, too."""
+        return self.device_id in (self.coordinator.data or {})
+
+    @property
+    def is_on(self) -> bool:
+        return self.device_id in self.coordinator.winter
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_winter(self.device_id, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_winter(self.device_id, False)
 
 
 class ContinuousPosition(GardenaEntity, SwitchEntity, RestoreEntity):
